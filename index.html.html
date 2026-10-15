@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fret Coach</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: phone-first single column. Chord buttons on top, then the coach card (chart beside the instruction),
+   then the whole-chord and per-string reports. Calibration takes over the screen while it runs. */
+:root{
+  --bg:#f3f1ec; --surface:#fffdf8; --ink:#1d1a17; --muted:#6c645b; --line:#d9d2c6;
+  --wood:#3a2a1f; --wood-ink:#f4ead9; --brass:#b07d1e; --brass-soft:#f1e3c2;
+  --good:#2f7d4f; --good-soft:#dcefe2; --warn:#a46a00; --warn-soft:#f6e8c9; --bad:#b13a2b; --bad-soft:#f5dcd6;
+  --f-display:"Big Shoulders Display","Arial Narrow",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17130f; --surface:#211b16; --ink:#efe7da; --muted:#a99d8e; --line:#3a3129;
+  --wood:#2b1f17; --wood-ink:#efe3cf; --brass:#d9a441; --brass-soft:#3d2f17;
+  --good:#6cc28d; --good-soft:#1d3426; --warn:#e2b04f; --warn-soft:#3a2e15; --bad:#ec8273; --bad-soft:#3d211c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17130f; --surface:#211b16; --ink:#efe7da; --muted:#a99d8e; --line:#3a3129;
+  --wood:#2b1f17; --wood-ink:#efe3cf; --brass:#d9a441; --brass-soft:#3d2f17;
+  --good:#6cc28d; --good-soft:#1d3426; --warn:#e2b04f; --warn-soft:#3a2e15; --bad:#ec8273; --bad-soft:#3d211c; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.45}
+button{font-family:inherit;touch-action:manipulation}
+.wrap{max-width:640px;margin:0 auto;padding-block:14px 40px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1;margin:0;text-transform:uppercase;letter-spacing:.01em}
+.iconbtn{min-height:44px;padding:0 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+.iconbtn[aria-pressed="false"]{color:var(--muted)}
+
+/* chord picker: big tap targets, 4 per row */
+.chords{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chords button{font-family:var(--f-display);font-weight:600;font-size:26px;min-height:54px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer}
+.chords button[aria-pressed="true"]{background:var(--wood);color:var(--wood-ink);border-color:var(--wood)}
+.chords button{position:relative}
+.chords button.done::after{content:"✓";position:absolute;top:3px;right:6px;font:600 13px var(--f-body);color:var(--good)}
+.chords button.done[aria-pressed="true"]::after{color:var(--wood-ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+
+/* coach card */
+.coach{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:14px}
+.stage{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:start}
+@media (min-width:560px){.stage{grid-template-columns:170px 1fr}}
+.chart{background:var(--wood);border-radius:10px;padding:10px 8px 6px}
+.chart svg{display:block;width:100%;height:auto}
+.speech{display:grid;gap:8px;min-width:0}
+.label{font-family:var(--f-mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.label.fix{color:var(--bad)} .label.good{color:var(--good)} .label.warn{color:var(--warn)}
+.say{font-size:21px;line-height:1.3;font-weight:600;margin:0;text-wrap:pretty}
+.prompt{margin:0;font-size:16px;color:var(--muted)}
+.prompt:empty{display:none}
+.meter{position:relative;height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.meter b{position:absolute;top:0;bottom:0;left:73%;right:10%;background:var(--good);opacity:.25}
+.meter i{position:relative;z-index:1;display:block;height:100%;width:0;background:var(--brass);transition:width .06s linear}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{font-weight:600;font-size:17px;min-height:52px;padding:0 14px;border-radius:12px;border:1.5px solid var(--wood);background:var(--wood);color:var(--wood-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.wide{grid-column:1/-1}
+.btn[aria-pressed="true"]{background:var(--brass-soft);border-color:var(--brass);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* guitar / calibration panel */
+.guitar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:12px}
+.guitar .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.guitar h2,.report h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0;text-transform:uppercase;letter-spacing:.02em}
+.guitar p{margin:0;color:var(--muted);font-size:15px}
+.cal{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.cal div{border:1.5px solid var(--line);border-radius:8px;padding:8px 2px 6px;text-align:center;font-family:var(--f-mono);font-size:11px;line-height:1.25;font-variant-numeric:tabular-nums;min-width:0}
+.cal b{display:block;font-size:17px;color:var(--ink)}
+.cal .c{color:var(--muted)} .cal .c.off{color:var(--warn)}
+.cal .bar{height:4px;background:var(--line);border-radius:2px;margin:6px 6px 0;overflow:hidden}
+.cal .bar i{display:block;height:100%;background:var(--brass)}
+.cal div.now{border-color:var(--brass);background:var(--brass-soft)}
+.cal div.done{border-color:var(--good)}
+details.mic{border-top:1px solid var(--line);padding-top:10px}
+details.mic summary{cursor:pointer;font-size:15px;font-weight:600;min-height:36px;display:flex;align-items:center}
+.boost{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:15px;color:var(--muted);padding-top:6px}
+.boost input{width:100%;height:32px;accent-color:var(--brass)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.autob{display:flex;align-items:center;gap:10px;font-size:15px;min-height:40px}
+.autob input{width:22px;height:22px;accent-color:var(--brass)}
+
+/* calibration mode: the guitar panel is the whole job, so chord UI steps back */
+body.calibrating .chords,body.calibrating .report,body.calibrating #strumBtn{display:none}
+body.calibrating .guitar{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass-soft)}
+body.calibrating .coach{order:-1}
+
+/* reports */
+.report{display:grid;gap:8px}
+.strum{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.strumtop{display:flex;gap:10px;align-items:flex-start}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--f-mono);padding:5px 9px;border-radius:8px;border:1px solid var(--line);color:var(--muted)}
+.chip.ok{background:var(--good-soft);color:var(--good);border-color:transparent}
+.chip.fix{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.more{margin:0;padding-left:18px;font-size:15px}
+.strings{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.strings li{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.strings li.now{background:var(--brass-soft);margin:0 -14px;padding-left:14px;padding-right:14px}
+.sname{font-family:var(--f-mono);font-weight:500;font-size:16px}
+.sname small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.msg{min-width:0;font-size:15.5px}
+.msg .heard{display:block;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pill{font:500 12px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 8px;border-radius:999px;white-space:nowrap;background:var(--line);color:var(--muted)}
+.pill.ok{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.fix{background:var(--bad-soft);color:var(--bad)} .pill.now{background:var(--brass);color:var(--surface)}
+.note{font-size:14px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Fret Coach</h1>
+    <button class="iconbtn" id="voice" type="button" aria-pressed="false" hidden>Voice off</button>
+  </header>
+
+  <div class="chords" id="chords" role="group" aria-label="Pick a chord"></div>
+
+  <section class="coach" aria-live="polite">
+    <div class="stage">
+      <div class="chart"><svg id="chart" viewBox="0 0 180 210" role="img" aria-label="Chord chart"></svg></div>
+      <div class="speech">
+        <span class="label" id="phase">Ready</span>
+        <p class="say" id="say">Tap Start, then pick a chord. The app listens on its own from there.</p>
+        <p class="prompt" id="prompt"></p>
+      </div>
+    </div>
+    <div class="meter" aria-hidden="true"><i id="lvl"></i><b></b></div>
+    <div class="controls">
+      <button class="btn wide" id="start" type="button">Start listening</button>
+      <button class="btn ghost" id="skip" type="button" disabled>Skip string</button>
+      <button class="btn ghost" id="strumBtn" type="button" aria-pressed="false" disabled>Strum practice</button>
+    </div>
+  </section>
+
+  <section class="guitar">
+    <div class="top">
+      <h2 id="calTitle">Your guitar</h2>
+      <button class="iconbtn" id="calBtn" type="button">Calibrate</button>
+    </div>
+    <p id="calNote">Not calibrated yet. It runs automatically the first time you start: pluck each open string once so the app learns your guitar's tuning and how long its strings ring.</p>
+    <div class="cal" id="cal"></div>
+    <details class="mic">
+      <summary>Mic settings</summary>
+      <label class="boost" for="boost"><span>Mic boost</span><input type="range" id="boost" min="0" max="42" step="1"><span id="boostVal" class="mono"></span></label>
+      <label class="autob" for="autoBoost"><input type="checkbox" id="autoBoost"> Adjust automatically</label>
+      <p class="note" id="boostNote"></p>
+    </details>
+  </section>
+
+
+  <section class="report">
+    <h2>Whole chord</h2>
+    <div class="strum" id="strum"></div>
+  </section>
+
+  <section class="report">
+    <h2>String by string</h2>
+    <ul class="strings" id="list"></ul>
+  </section>
+
+  <p class="note">Point the bottom edge of your phone (where the mic is) at the sound hole, 20–40 cm away. Picking a chord starts listening; when a chord is complete, listening stops until you pick the next one. Calibration is saved on this device; redo it after retuning or changing strings.</p>
+</div>
+
+<script>
+const STR=[{n:"E",full:"low E string",midi:40},{n:"A",full:"A string",midi:45},{n:"D",full:"D string",midi:50},{n:"G",full:"G string",midi:55},{n:"B",full:"B string",midi:59},{n:"e",full:"high E string",midi:64}];
+const FING=["","index","middle","ring","pinky"];
+// frets low E → high e; -1 = don't play, 0 = open. fingers 1–4.
+const CHORDS={
+  C:{f:[-1,3,2,0,1,0],g:[0,3,2,0,1,0]},
+  G:{f:[3,2,0,0,0,3],g:[2,1,0,0,0,3]},
+  D:{f:[-1,-1,0,2,3,2],g:[0,0,0,1,3,2]},
+  A:{f:[-1,0,2,2,2,0],g:[0,0,1,2,3,0]},
+  E:{f:[0,2,2,1,0,0],g:[0,2,3,1,0,0]},
+  Am:{f:[-1,0,2,2,1,0],g:[0,0,2,3,1,0]},
+  Em:{f:[0,2,2,0,0,0],g:[0,2,3,0,0,0]},
+  Dm:{f:[-1,-1,0,2,3,1],g:[0,0,0,2,3,1]}
+};
+const NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const noteName=m=>NAMES[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);
+const $=id=>document.getElementById(id);
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const CAP_S=0.45, STRUM_S=0.8, TYPICAL_RING=0.6, TARGET=0.12;
+
+let chord="C", results=[], current=-1, calCurrent=-1, calMode=false, strumRes=null, voiceOn=false;   // voice is off for now
+let running=false, gen=0, skipFlag=false, practice=false;
+let doneSet=new Set(); try{doneSet=new Set(JSON.parse(localStorage.getItem("fretcoach-done")||"[]"))}catch(e){}
+let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&cal.v!==2)cal=null}catch(e){}
+let boostDb=18,autoBoost=true; try{const b=parseFloat(localStorage.getItem("fretcoach-boost"));if(isFinite(b))boostDb=b;autoBoost=localStorage.getItem("fretcoach-autoboost")!=="0"}catch(e){}
+// every job captures the generation it started in; starting a new job or pausing bumps it, so old jobs fall away at once
+const liveFn=()=>{const g=gen;return ()=>running&&g===gen};
+let alive=liveFn();
+const playable=()=>CHORDS[chord].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
+
+// ---------- UI ----------
+function buildPicker(){
+  $("chords").innerHTML="";
+  Object.keys(CHORDS).forEach(k=>{
+    const b=document.createElement("button");b.type="button";b.textContent=k;b.id="c-"+k;
+    b.dataset.chord=k;b.setAttribute("aria-label",k);b.setAttribute("aria-pressed",k===chord);b.onclick=()=>pickChord(b.dataset.chord);
+    $("chords").appendChild(b);
+  });
+}
+function setSay(text,phase,kind=""){ $("say").textContent=text; if(phase!==undefined){$("phase").textContent=phase;$("phase").className="label "+kind} }
+function setPrompt(t){$("prompt").textContent=t||""}
+function drawChart(){
+  const x=i=>20+i*28,y=f=>40+f*40-20;let s="";
+  if(calMode){
+    s+=`<text x="90" y="16" text-anchor="middle" font-family="Big Shoulders Display, sans-serif" font-weight="800" font-size="20" fill="var(--wood-ink)">OPEN</text><rect x="18" y="38" width="144" height="5" fill="var(--wood-ink)"/>`;
+    for(let f=1;f<=4;f++)s+=`<line x1="20" x2="160" y1="${40+f*40}" y2="${40+f*40}" stroke="var(--wood-ink)" stroke-opacity=".3" stroke-width="1.5"/>`;
+    for(let i=0;i<6;i++){const on=i===calCurrent,done=cal&&calCurrent>i;const col=on?"var(--brass)":done?"var(--good)":"var(--wood-ink)";
+      s+=`<line x1="${x(i)}" x2="${x(i)}" y1="40" y2="200" stroke="${col}" stroke-width="${on?4:1.2+(5-i)*0.25}"/><circle cx="${x(i)}" cy="29" r="5" fill="${on?"var(--brass)":"none"}" stroke="${col}" stroke-width="1.5"/>`}
+    $("chart").innerHTML=s;return;
+  }
+  const c=CHORDS[chord];
+  s+=`<text x="90" y="16" text-anchor="middle" font-family="Big Shoulders Display, sans-serif" font-weight="800" font-size="20" fill="var(--wood-ink)">${chord}</text><rect x="18" y="38" width="144" height="5" fill="var(--wood-ink)"/>`;
+  for(let f=1;f<=4;f++)s+=`<line x1="20" x2="160" y1="${40+f*40}" y2="${40+f*40}" stroke="var(--wood-ink)" stroke-opacity=".45" stroke-width="1.5"/>`;
+  for(let i=0;i<6;i++){
+    const r=results[i],on=i===current,col=on?"var(--brass)":r?.st==="fix"?"var(--bad)":r?.st==="warn"?"var(--warn)":r?.st==="ok"?"var(--good)":"var(--wood-ink)";
+    s+=`<line x1="${x(i)}" x2="${x(i)}" y1="40" y2="200" stroke="${col}" stroke-width="${on?4:1.2+(5-i)*0.25}"/>`;
+    if(c.f[i]===-1)s+=`<text x="${x(i)}" y="34" text-anchor="middle" font-size="13" fill="var(--wood-ink)" font-family="IBM Plex Mono, monospace">✕</text>`;
+    else if(c.f[i]===0)s+=`<circle cx="${x(i)}" cy="29" r="5" fill="none" stroke="${col}" stroke-width="1.5"/>`;
+    else s+=`<circle cx="${x(i)}" cy="${y(c.f[i])}" r="11" fill="${on?"var(--brass)":"var(--wood-ink)"}"/><text x="${x(i)}" y="${y(c.f[i])+4.5}" text-anchor="middle" font-size="13" font-weight="600" fill="var(--wood)" font-family="IBM Plex Sans, sans-serif">${c.g[i]}</text>`;
+  }
+  $("chart").innerHTML=s;
+}
+function drawList(){
+  const c=CHORDS[chord];
+  $("list").innerHTML=STR.map((st,i)=>{
+    const head=`<span class="sname">${st.n}<small>string ${6-i}</small></span>`;
+    if(c.f[i]===-1)return `<li>${head}<span class="msg">Don't play this string.</span><span class="pill">skip</span></li>`;
+    const r=results[i],exp=st.midi+c.f[i],want=c.f[i]===0?"open":`${FING[c.g[i]]} finger, fret ${c.f[i]}`;
+    let pill=`<span class="pill">waiting</span>`,msg=`Should be ${noteName(exp)} (${want}).`;
+    if(r){pill=`<span class="pill ${r.st}">${r.st==="ok"?"good":r.st==="warn"?"ok-ish":"fix"}</span>`;msg=`${r.text}<span class="heard">${r.heard}</span>`}
+    if(i===current&&(!r||r.st==="fix"))pill=`<span class="pill now">pluck</span>`;
+    return `<li class="${i===current?"now":""}">${head}<span class="msg">${msg}</span>${pill}</li>`;
+  }).join("");
+}
+// tuning as a simple scale: 0 in tune, ±1 slightly off (fine), ±2 noticeably off, "retune" if way out
+function tuneLevel(c){const a=Math.abs(c),sg=c<0?"−":"+";return a<10?"0":a<25?sg+"1":a<50?sg+"2":"retune"}
+function tuneWords(c){const a=Math.abs(c),w=c<0?"flat":"sharp";return a<10?"in tune":a<25?`slightly ${w}`:a<50?`${w}`:`very ${w}`}
+function drawCal(){
+  $("cal").innerHTML=STR.map((st,i)=>{
+    const c=cal?.s?.[i],cls=i===calCurrent?"now":(calMode&&i<calCurrent?"done":"");
+    const r=c?Math.round(c.cents):0,tune=!c?"–":tuneLevel(r),ring=c?Math.min(100,Math.round(c.ring/TYPICAL_RING*100)):0;
+    return `<div class="${cls}"><b>${st.n}</b><span class="c ${c&&Math.abs(r)>=25?"off":""}">${tune}</span><div class="bar"><i style="width:${ring}%"></i></div></div>`;
+  }).join("");
+  $("calTitle").textContent=calMode?"Calibrating":"Your guitar";
+  $("calBtn").textContent=calMode?"Cancel":(cal?"Recalibrate":"Calibrate");
+  if(calMode)$("calNote").textContent="Pluck each open string as it lights up, low E first. Keep your fretting hand off the strings.";
+  else if(cal){
+    const off=STR.filter((s,i)=>Math.abs(cal.s[i].cents)>=25).map(s=>s.n);
+    $("calNote").textContent=off.length?`Worth retuning: ${off.join(", ")}. Then recalibrate. (0 = in tune, −1/+1 slightly off, −2/+2 noticeably off.)`:"Tuning: 0 = in tune, −1 / +1 = slightly flat / sharp (fine), −2 / +2 = worth retuning. Bars show how long each string rings.";
+  }
+}
+function drawStrum(){
+  const el=$("strum");
+  if(!strumRes){el.innerHTML=`<p class="msg">Once every string passes, strum the whole chord. It listens until the strum sounds right.</p>`;return}
+  const chips=strumRes.notes.map(n=>`<span class="chip ${n.shared?"":n.ok?"ok":"fix"}">${STR[n.i].n} · ${noteName(n.m)}</span>`).join("");
+  el.innerHTML=`<div class="strumtop"><span class="pill ${strumRes.st}">${strumRes.st==="ok"?"sounds good":strumRes.st==="warn"?"close":"fix"}</span><span class="msg">${strumRes.verdict}</span></div><div class="chips">${chips}</div>${strumRes.fixes.length>1?`<ul class="more">${strumRes.fixes.slice(1).map(f=>`<li>${f}</li>`).join("")}</ul>`:""}`;
+}
+function drawAll(){drawChart();drawList();drawCal();drawStrum()}
+let speakDone=null;
+function stopSpeech(){try{speechSynthesis.cancel()}catch(e){}const d=speakDone;speakDone=null;if(d)d()}
+function speak(t,force){
+  const ok=force?()=>true:alive;
+  return new Promise(res=>{
+    if(!ok()){res();return}
+    if(!voiceOn||!("speechSynthesis" in window)){setTimeout(res,600);return}
+    let done=false;const fin=()=>{if(!done){done=true;if(speakDone===fin)speakDone=null;res()}};
+    speakDone=fin;
+    try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);pickVoice(u);u.rate=1.08;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u);setTimeout(fin,Math.min(9000,1500+t.length*70))}catch(e){setTimeout(fin,600)}
+  });
+}
+// iPhones only allow speech that is first started from a tap, so every button primes it
+let voicePrimed=false;
+function pickVoice(u){try{const vs=speechSynthesis.getVoices(),v=vs.find(v=>/^en(-|_)US/i.test(v.lang)&&v.localService)||vs.find(v=>/^en/i.test(v.lang));if(v)u.voice=v}catch(e){}}
+function primeVoice(say){
+  if(!voiceOn||!("speechSynthesis" in window))return;
+  try{if(say||!voicePrimed){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(say||"Okay");pickVoice(u);u.rate=1.08;speechSynthesis.speak(u);voicePrimed=true}}catch(e){}
+  try{(A?.ctx||(window.__ctx=window.__ctx||new (window.AudioContext||window.webkitAudioContext)())).resume()}catch(e){}
+}
+$("voice").onclick=()=>{voiceOn=!voiceOn;$("voice").textContent=voiceOn?"Voice on":"Voice off";$("voice").setAttribute("aria-pressed",voiceOn);if(!voiceOn){try{speechSynthesis.cancel()}catch(e){}}else primeVoice("Voice is on.")};
+
+// ---------- pitch (YIN) ----------
+function yin(buf,sr){
+  const W=Math.floor(buf.length/2),minT=Math.floor(sr/900),maxT=Math.min(W-1,Math.floor(sr/70));
+  const d=new Float32Array(maxT+1);
+  for(let t=1;t<=maxT;t++){let s=0;for(let i=0;i<W;i++){const v=buf[i]-buf[i+t];s+=v*v}d[t]=s}
+  let run=0;const c=new Float32Array(maxT+1);c[0]=1;
+  for(let t=1;t<=maxT;t++){run+=d[t];c[t]=run?d[t]*t/run:1}
+  let tau=-1;
+  for(let t=minT;t<=maxT;t++){if(c[t]<0.15){while(t+1<=maxT&&c[t+1]<c[t])t++;tau=t;break}}
+  if(tau<0){let m=1;for(let t=minT;t<=maxT;t++)if(c[t]<m){m=c[t];tau=t}}
+  if(tau<=0)return {f:0,clar:0};
+  const a=c[tau-1]??c[tau],b=c[tau],e=c[tau+1]??c[tau],den=a+e-2*b,sh=den?(a-e)/(2*den):0;
+  return {f:sr/(tau+sh),clar:1-b};
+}
+const rms=(b,s=0,e=b.length)=>{let t=0;for(let i=s;i<e;i++)t+=b[i]*b[i];return Math.sqrt(t/Math.max(1,e-s))};
+const median=a=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
+const semis=f=>12*Math.log2(f/440)+69;
+const hzOf=m=>440*Math.pow(2,(m-69)/12);
+const centsApart=(a,b)=>Math.abs(1200*Math.log2(a/b));
+function foldOct(d){const k=Math.round(d/12);return (k!==0&&Math.abs(d-12*k)<0.6)?d-12*k:d}
+
+// One pluck → pitch + how well it keeps ringing.
+// Other strings are often still ringing when you pluck the next one, which confuses a plain pitch tracker
+// (that was the false "isn't ringing"). So we: (1) take the spectrum after the pluck and subtract what was
+// already sounding just before it, and (2) only consider notes this string can physically play (lo..hi).
+const PW=16384,PN=32768;
+function specOf(x,off,len,N=PN){
+  const re=new Float64Array(N),im=new Float64Array(N);
+  for(let i=0;i<len&&off+i<x.length;i++)if(off+i>=0)re[i]=x[off+i]*(0.5-0.5*Math.cos(2*Math.PI*i/(len-1)));
+  fft(re,im);const m=new Float64Array(N/2);for(let k=0;k<N/2;k++)m[k]=Math.hypot(re[k],im[k]);return m;
+}
+function binPeak(mag,f,df,cents){const lo=Math.max(1,Math.floor(Math.min(f*Math.pow(2,-cents/1200),f-df)/df)),hi=Math.ceil(Math.max(f*Math.pow(2,cents/1200),f+df)/df);let bk=lo,bv=0;for(let k=lo;k<=hi&&k<mag.length-1;k++)if(mag[k]>bv){bv=mag[k];bk=k}return {k:bk,v:bv}}
+function analyse(seg,sr,pre,lo,hi){
+  const df=sr/PN,o=Math.floor(0.03*sr);
+  const E=specOf(seg,o,PW),P=pre?specOf(pre,pre.length-PW,PW):null;
+  const New=P?E.map((v,k)=>Math.max(0,v-1.3*P[k])):E;
+  const band=[];for(let k=Math.floor(70/df);k<2000/df;k++)band.push(E[k]);const floor=median(band)||1e-12;
+  const pk=f=>binPeak(New,f,df,35).v, W=[0,1,1,0.8,0.6,0.5];
+  let best=null;
+  for(let m=lo;m<=hi;m+=0.5){
+    const f=hzOf(m);let sc=0;for(let h=1;h<=5;h++)sc+=W[h]*pk(h*f);
+    if(pk(f)+pk(3*f)<0.15*sc)continue;   // no fundamental or odd overtone: this is an octave mistake
+    if(!best||sc>best.sc)best={m,f,sc};
+  }
+  const peak=rms(seg,o,o+Math.floor(0.08*sr));
+  if(!best)return {f:0,ring:0,peak,conf:0};
+  // refine the pitch from the strongest few harmonics (higher harmonics give finer tuning resolution)
+  let num=0,den=0,top=0;
+  for(let h=1;h<=4;h++){const r=binPeak(E,h*best.f,df,35);if(r.k<1)continue;const a=E[r.k-1],b=E[r.k],c=E[r.k+1],d2=a-2*b+c,sh=d2?0.5*(a-c)/d2:0;const fh=(r.k+sh)*df/h;num+=fh*b;den+=b;top=Math.max(top,binPeak(New,h*best.f,df,35).v)}
+  const conf=top/floor;
+  if(conf<8||!den)return {f:0,ring:0,peak,conf};
+  const f=num/den;
+  // ring: the plucked note's own harmonics, late vs early, so other strings' sustain doesn't count
+  const n2=8192,w2=4096,e1=specOf(seg,o,w2,n2),e2=specOf(seg,Math.floor(0.30*sr),w2,n2),d2f=sr/n2;
+  let ee=0,ll=0;for(let h=1;h<=3;h++){ee+=binPeak(e1,h*f,d2f,40).v;ll+=binPeak(e2,h*f,d2f,40).v}
+  return {f,ring:ee?ll/ee:0,peak,conf};
+}
+
+// ---------- the secret sauce: one string ----------
+function diagnose(i,a){
+  const c=CHORDS[chord],st=STR[i],fret=c.f[i],fing=FING[c.g[i]],exp=st.midi+fret,base=cal?.s?.[i];
+  const nb=()=>{for(const j of [i-1,i+1])if(j>=0&&j<6&&c.f[j]>0)return j;return -1};
+  if(!a.f){
+    const heard="No clear note";
+    if(fret>0)return {st:"fix",heard,text:`Your ${fing} finger on the ${st.full} isn't ringing. Press just behind fret ${fret} and arch your finger so the tip stands up.`};
+    const j=nb();
+    if(j>=0)return {st:"fix",heard,text:`The ${st.full} sounds muted. Arch your ${FING[c.g[j]]} finger so it doesn't touch the ${st.full}.`};
+    return {st:"fix",heard,text:`The ${st.full} isn't ringing clearly. Make sure your palm or thumb isn't resting on it.`};
+  }
+  const sm=semis(a.f),d=foldOct(sm-exp-(base?base.cents/100:0)),dr=Math.round(d);
+  const heard=`Heard ${noteName(sm)}, want ${noteName(exp)}${Math.abs(d)<0.5?` · ${tuneWords(d*100)} (${tuneLevel(d*100)})`:""}`;
+  if(Math.abs(d)<0.4){
+    // right note. Only call it choked if it dies far faster than this string normally does.
+    const dead=a.ring<(base?base.ring*0.08:0.025),choked=a.ring<(base?base.ring*0.15:0.05);
+    if(dead){const j=nb();return {st:"fix",heard:heard+" · stops almost at once",text:fret>0?`Right note, but it's being muted. Press your ${fing} finger firmly and arch it.`:(j>=0?`The ${st.full} is being muted. Arch your ${FING[c.g[j]]} finger so it doesn't touch it.`:`The ${st.full} is being muted. Check your palm isn't resting on it.`)}}
+    return choked?{st:"warn",heard:heard+" · short ring",text:`Right note, but it stops quickly. Press a little firmer${fret>0?` with your ${fing} finger`:""}.`}:{st:"ok",heard,text:`${cap(st.full)} sounds good.`};
+  }
+  if(fret>0&&dr===-fret)return {st:"fix",heard,text:`That's the open string. Press your ${fing} finger down firmly on the ${st.full} at fret ${fret}.`};
+  if(Math.abs(d)<0.6)return {st:"warn",heard,text:`${cap(st.full)} is a little ${d>0?"sharp":"flat"}. Ease off the pressure a little.`};
+  if(fret>0&&Math.abs(dr)<=2&&fret+dr>=1){const n=Math.abs(dr);return {st:"fix",heard,text:`Move your ${fing} finger ${n} fret${n>1?"s":""} toward the ${dr>0?"headstock":"body"}, to fret ${fret}.`}}
+  if(fret===0&&dr>0&&dr<=4){
+    const j=nb();
+    return {st:"fix",heard,text:j>=0?`The ${st.full} should ring open. Your ${FING[c.g[j]]} finger is probably pressing it; lift and arch it.`:`The ${st.full} should ring open. Something is pressing it; lift that finger off.`};
+  }
+  return {st:"fix",heard,text:fret>0?`Wrong note. Put your ${fing} finger on the ${st.full}, fret ${fret}.`:`Wrong note on the ${st.full}. Check that nothing touches it.`};
+}
+
+// ---------- the whole chord ----------
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]]}}
+  for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const a=i+k,b=a+len/2,tr=re[b]*cr-im[b]*ci,ti=re[b]*ci+im[b]*cr;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr}}}
+}
+function spectrum(seg,sr,off=Math.floor(0.06*sr)){
+  const N=32768,re=new Float64Array(N),im=new Float64Array(N);
+  for(let i=0;i<N&&off+i<seg.length;i++)re[i]=seg[off+i]*(0.5-0.5*Math.cos(2*Math.PI*i/(N-1)));
+  fft(re,im);const mag=new Float64Array(N/2);for(let k=0;k<N/2;k++)mag[k]=Math.hypot(re[k],im[k]);
+  const df=sr/N,band=[];for(let k=Math.floor(70/df);k<2000/df;k++)band.push(mag[k]);
+  return {mag,df,floor:median(band)||1e-12};
+}
+function peakNear(sp,f,c=30){const lo=Math.floor(f*Math.pow(2,-c/1200)/sp.df),hi=Math.ceil(f*Math.pow(2,c/1200)/sp.df);let m=0;for(let k=lo;k<=hi&&k<sp.mag.length;k++)m=Math.max(m,sp.mag[k]);return m/sp.floor}
+// pre = sound from just before the strum: anything already there (room hum, fan, body boom) is not blamed on the chord
+function analyseStrum(seg,sr,pre){
+  const c=CHORDS[chord],sp=spectrum(seg,sr),ps=playable(),bg=pre?spectrum(pre,sr,0):null;
+  const tune=i=>cal?.s?.[i]?cal.s[i].cents/100:0;
+  const notes=ps.map(i=>({i,m:STR[i].midi+c.f[i],f:hzOf(STR[i].midi+c.f[i]+tune(i))}));
+  const NEED=[0,6,5,3];
+  for(const n of notes){
+    // judge a note only by harmonics no other string shares; a note that is an exact octave of another string can't be told apart
+    const own=[1,2,3].filter(h=>!notes.some(o=>o!==n&&[1,2,3,4].some(h2=>centsApart(h*n.f,h2*o.f)<40)));
+    n.shared=own.length===0;
+    n.score=n.shared?0:Math.max(...own.map(h=>peakNear(sp,h*n.f)/NEED[h]));
+    // when only a faint 3rd harmonic is unique, be lenient: call it missing only if there is almost nothing there
+    n.ok=n.shared||n.score>=(own.includes(1)||own.includes(2)?1:0.5);
+  }
+  const extras=[];
+  for(let k=Math.floor(75/sp.df);k<1100/sp.df;k++){
+    const v=sp.mag[k]/sp.floor;if(v<20||sp.mag[k]<sp.mag[k-1]||sp.mag[k]<sp.mag[k+1])continue;
+    if(bg){let b=0;for(let j=k-2;j<=k+2;j++)b=Math.max(b,bg.mag[j]||0);if(sp.mag[k]<b*4)continue}   // was already ringing before the strum
+    const f=k*sp.df;
+    if(notes.some(n=>[1,2,3,4,5,6,7,8].some(h=>centsApart(f,h*n.f)<(h<5?45:70))))continue;   // real strings' high overtones run a little sharp
+    extras.push({f,v});
+  }
+  extras.sort((a,b)=>b.v-a.v);
+  const early=rms(seg,Math.floor(0.03*sr),Math.floor(0.11*sr)),late=rms(seg,Math.floor(0.32*sr),Math.floor(0.42*sr));
+  return {notes,extras:extras.slice(0,6),ring:early?late/early:0,sp};
+}
+function judgeStrum(a){
+  const c=CHORDS[chord],fixes=[],blamed=new Set(),heardF=[],H=[1,2,3,4,5,6,7,8],sp=a.sp;
+  const chordF=a.notes.map(n=>n.f);
+  const explained=f=>chordF.some(cf=>H.some(h=>centsApart(f,h*cf)<(h<5?45:70)));
+  const raw=f=>peakNear(sp,f)*sp.floor;
+  // how loud the chord's own strings are: a string you actually strike is about as loud as these
+  // (overtone h is weighted by h because overtones naturally get quieter, and phone mics barely pick up the lowest notes)
+  const ref=median(a.notes.map(n=>Math.max(raw(n.f),2*raw(2*n.f))))||1e-12;
+  // strength of a string's sound, counting only overtones the chord doesn't already produce
+  const own=f0=>{let m=0;for(const h of [1,2,3,4])if(!explained(h*f0))m=Math.max(m,h*raw(h*f0));return m};
+  // Unplayed strings vibrate a little on their own when the chord shares their notes (sympathetic ringing),
+  // and the guitar body adds low booms. Both are quiet, so a string is only blamed when it is nearly as loud as the chord.
+  // loudest suspect first; its overtones then can't be blamed on another string
+  const byBlamed=f=>heardF.some(b=>[1,2,3,4,5,6,7,8,9,10].some(h=>centsApart(f,h*b)<70));
+  const suspects=[];
+  for(let i=0;i<6;i++){if(c.f[i]===0)continue;const f0=hzOf(STR[i].midi),lvl=own(f0);if(lvl>=0.4*ref)suspects.push({i,f0,lvl})}
+  suspects.sort((x,y)=>y.lvl-x.lvl);
+  for(const {i,f0} of suspects){
+    if(!a.extras.some(e=>!byBlamed(e.f)&&[1,2,3,4].some(h=>centsApart(e.f,h*f0)<45)))continue;
+    blamed.add(i);heardF.push(f0);
+    fixes.push(c.f[i]===-1?`The ${STR[i].full} is ringing. Start your strum from the ${STR[c.f.findIndex(f=>f>=0)].full}.`:`The ${STR[i].full} is ringing open. Press your ${FING[c.g[i]]} finger down on fret ${c.f[i]}.`);
+  }
+  for(const e of [...a.extras].sort((x,y)=>x.f-y.f)){
+    if(byBlamed(e.f))continue;
+    // a clearly wrong note: higher than body boom, strong, and about as loud as the chord itself
+    if(e.f>=150&&e.v>=40&&raw(e.f)>=0.5*ref){heardF.push(e.f);fixes.push(`I hear a ${noteName(semis(e.f))} that isn't in ${chord}. A finger may be on the wrong fret; check the string list.`)}
+  }
+  for(const n of a.notes)if(!n.ok&&!blamed.has(n.i)){
+    const st=STR[n.i];
+    if(c.f[n.i]>0)fixes.push(`The ${st.full} is missing from the strum. Press your ${FING[c.g[n.i]]} finger firmly and keep it arched.`);
+    else{const j=[n.i-1,n.i+1].find(j=>j>=0&&j<6&&c.f[j]>0);fixes.push(`The ${st.full} is missing from the strum. ${j!==undefined?`Arch your ${FING[c.g[j]]} finger so it clears it.`:"Make sure nothing rests on it."}`)}
+  }
+  for(const n of a.notes)if(blamed.has(n.i))n.ok=false;
+  const avgRing=cal?cal.s.reduce((t,x)=>t+x.ring,0)/6:TYPICAL_RING;
+  const uniq=[...new Set(fixes)];
+  let verdict,st;
+  if(!uniq.length&&a.ring>=avgRing*0.35){st="ok";verdict=`That ${chord} sounds good. Every string comes through.`}
+  else if(!uniq.length){st="warn";verdict=`All the notes are there, but the chord dies out quickly. Press a little firmer and let it ring.`}
+  else{st="fix";verdict=uniq[0]}
+  return {st,verdict,fixes:uniq,notes:a.notes};
+}
+
+// ---------- live audio ----------
+// mic → high-pass 70 Hz → low-pass 2.5 kHz → boost → continuous ring buffer (plucks are caught the instant they start)
+let A=null;
+function setBoost(db,thr){
+  const old=boostDb;boostDb=Math.max(0,Math.min(42,Math.round(db)));
+  if(thr)thr.v*=Math.pow(10,(boostDb-old)/20);
+  if(A?.gain)A.gain.gain.setTargetAtTime(Math.pow(10,boostDb/20),A.ctx.currentTime,0.02);
+  $("boost").value=boostDb;$("boostVal").textContent=`+${boostDb} dB`;
+  try{localStorage.setItem("fretcoach-boost",boostDb)}catch(e){}
+}
+async function getStream(){
+  try{return await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}})}
+  catch(e){if(e&&e.name==="NotAllowedError")throw e;return await navigator.mediaDevices.getUserMedia({audio:true})}
+}
+async function openMic(){
+  const stream=await getStream();
+  const ctx=A?.ctx||window.__ctx||new (window.AudioContext||window.webkitAudioContext)();window.__ctx=ctx;await ctx.resume();
+  const sr=ctx.sampleRate,src=ctx.createMediaStreamSource(stream),proc=ctx.createScriptProcessor(1024,1,1);
+  const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=70;hp.Q.value=0.7;
+  const lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=2500;lp.Q.value=0.7;
+  const gain=ctx.createGain();gain.gain.value=Math.pow(10,boostDb/20);
+  const st={ctx,stream,proc,src,gain,sr,ring:new Float32Array(Math.floor(sr*4)),total:0,levels:[],waiters:[]};
+  proc.onaudioprocess=e=>{
+    const d=e.inputBuffer.getChannelData(0),L=st.ring.length,at=st.total;
+    for(let k=0;k<d.length;k++)st.ring[(at+k)%L]=d[k];
+    st.total+=d.length;const v=rms(d);st.levels.push(v);if(st.levels.length>12)st.levels.shift();
+    const db=20*Math.log10(Math.max(v,1e-6));$("lvl").style.width=Math.max(0,Math.min(100,(db+70)/70*100))+"%";
+    st.waiters=st.waiters.filter(w=>!w(v,at));
+  };
+  src.connect(hp);hp.connect(lp);lp.connect(gain);gain.connect(proc);proc.connect(ctx.destination);
+  A=st;return st;
+}
+function closeMic(){try{A?.proc.disconnect();A?.src.disconnect();A?.stream.getTracks().forEach(t=>t.stop())}catch(e){}if(A)A.waiters=[];$("lvl").style.width="0"}
+const read=(start,len)=>{const o=new Float32Array(len),L=A.ring.length;for(let k=0;k<len;k++)o[k]=A.ring[((start+k)%L+L)%L];return o};
+const waitUntil=idx=>{const ok=alive;return new Promise(res=>A.waiters.push(()=>{if(!ok()){res(false);return true}if(A.total>=idx){res(true);return true}return false}))};
+function nextAttack(from,thr){
+  let loudest=0,since=from;const ok=alive;
+  return new Promise(res=>A.waiters.push((v,at)=>{
+    if(!ok()){res(null);return true}
+    if(skipFlag){skipFlag=false;res("skip");return true}
+    if(at<from)return false;
+    const prev=A.levels.slice(-7,-1),mn=prev.length?Math.min(...prev):0;
+    if(v>thr.v&&v>mn*1.6){res(Math.max(0,at-256));return true}
+    loudest=Math.max(loudest,v/Math.max(mn,1e-6));
+    if(at-since>3*A.sr){if(autoBoost&&loudest>2&&boostDb<42){setBoost(boostDb+6,thr);setPrompt("Turned the mic up. Pluck again.")}loudest=0;since=at}
+    return false;
+  }));
+}
+function beep(){try{const o=A.ctx.createOscillator(),g=A.ctx.createGain();o.frequency.value=1320;g.gain.setValueAtTime(0.05,A.ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,A.ctx.currentTime+0.08);o.connect(g).connect(A.ctx.destination);o.start();o.stop(A.ctx.currentTime+0.09)}catch(e){}}
+async function noiseFloor(){
+  const vals=[],ok=alive;await new Promise(res=>A.waiters.push(v=>{vals.push(v);if(vals.length>=12||!ok()){res();return true}return false}));
+  return {v:Math.max(1e-5,median(vals)*3)};
+}
+async function hear(thr,from,lo,hi){
+  const at=await nextAttack(from,thr);if(at===null||at==="skip")return at;
+  const len=Math.floor(CAP_S*A.sr);if(!await waitUntil(at+len))return null;
+  const ps=at-PW-512,pre=ps>0&&A.total-ps<A.ring.length?read(ps,PW):null;
+  const a=analyse(read(at,len),A.sr,pre,lo,hi);
+  if(autoBoost&&a.peak>0&&(a.peak<TARGET/3||a.peak>0.5))setBoost(boostDb+Math.max(-12,Math.min(12,20*Math.log10(TARGET/a.peak))),thr);
+  return a;
+}
+const after=s=>A.total+Math.floor(s*A.sr);
+
+// ---------- jobs: one at a time; starting a new one (another chord, pause) drops the old one instantly ----------
+function runJob(fn){
+  gen++;skipFlag=false;stopSpeech();
+  if(A)A.waiters=A.waiters.filter(w=>!w(0,0));   // wake the old job's listeners so it can exit
+  alive=liveFn();
+  const job=alive;
+  (async()=>{try{await fn()}catch(e){console.error(e)}finally{if(job()&&!practice){}}})();
+}
+
+async function calibrate(ok=alive){
+  calMode=true;document.body.classList.add("calibrating");calCurrent=0;drawAll();
+  setSay("Quiet for a moment…","Calibrating");setPrompt("");
+  const thr=await noiseFloor();if(!ok())return endCal();
+  setSay("Pluck the open low E string.","Calibrating 1 of 6");await speak("Calibration. Pluck each open string as it lights up.");
+  const s=[];let from=after(0.1);
+  for(let i=0;i<6&&ok();i++){
+    calCurrent=i;drawChart();drawCal();setSay(`Pluck the open ${STR[i].full}.`,`Calibrating ${i+1} of 6`);
+    let r=null;
+    while(ok()&&!r){
+      const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+1);if(a===null)break;from=after(0.12);
+      if(a==="skip"){r={cents:0,ring:TYPICAL_RING,peak:0};break}
+      if(a.f){const cents=foldOct(semis(a.f)-STR[i].midi)*100;if(Math.abs(cents)<150)r={cents,ring:a.ring,peak:a.peak}}
+      if(!r)setPrompt(`Didn't catch a clear note. Pluck the open ${STR[i].full} again.`);
+    }
+    if(!r)break;s[i]=r;setPrompt("");beep();
+  }
+  if(s.length===6&&s.every(Boolean)){
+    cal={s,at:Date.now()};try{localStorage.setItem("fretcoach-cal",JSON.stringify(cal))}catch(e){}
+    cal.v=2;endCal();setSay("Calibration saved.","Calibrated","good");await speak("Calibration saved.");
+    return true;
+  }
+  endCal();return false;
+}
+function endCal(){calMode=false;calCurrent=-1;document.body.classList.remove("calibrating");drawAll()}
+
+async function checkChord(ok=alive){
+  if(!cal){const done=await calibrate(ok);if(!done||!ok())return}
+  results=[];strumRes=null;current=playable()[0];drawAll();
+  setSay(`Hold ${chord}, then pluck the ${STR[current].full}.`,`${chord} · string ${6-current}`);setPrompt("");
+  const thr=await noiseFloor();if(!ok())return;
+  let from=A.total;
+  for(const i of playable()){
+    let tries=0,missed=0;
+    while(ok()){
+      current=i;drawChart();drawList();
+      if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${chord} · string ${6-i}`);setPrompt("")}
+      const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12);if(a===null)return;
+      if(a==="skip"){results[i]=null;from=A.total;break}
+      // a pluck with no clear note at all is often a bad catch, not a muted string: ask once more before blaming a finger
+      if(!a.f&&missed===0&&!tries){missed++;setPrompt(`Didn't catch that clearly. Pluck the ${STR[i].full} again.`);from=after(0.1);continue}
+      const r=diagnose(i,a);results[i]=r;drawChart();drawList();
+      if(r.st!=="fix"){
+        beep();setSay(tries?`Fixed. ${cap(STR[i].full)} sounds good.`:`${cap(STR[i].full)} sounds good.`,`${chord} · string ${6-i}`,"good");setPrompt("");
+        await sleep(350);from=after(0.1);break;
+      }
+      tries++;missed=0;
+      // the fix stays on screen until the next pluck is judged
+      setSay(r.text,`Fix · try ${tries+1}`,"fix");setPrompt(`Adjust, then pluck the ${STR[i].full} again.`);
+      await speak(tries>2?`Still not right. ${r.text}`:r.text);
+      from=after(0.25);
+    }
+    if(!ok())return;
+  }
+  current=-1;drawChart();drawList();
+  setSay("All strings ring. Now strum the whole chord.","Strum","good");setPrompt("");
+  await speak("All strings ring. Now strum the whole chord.");
+  if(ok())await strumLoop(thr,after(0.2),true,ok);
+}
+
+// untilGood: after the string check, keep asking until one strum is right, then carry on as practice
+async function strumLoop(thr,from,untilGood,ok=alive){
+  if(!thr){setSay(`Strum ${chord}.`,"Strum practice");setPrompt("");thr=await noiseFloor();from=A.total}
+  current=-1;drawChart();
+  let n=0,goods=0;
+  while(ok()){
+    if(!n){setSay(`Strum the whole ${chord} chord and let it ring.`,"Strum");setPrompt("")}
+    const at=await nextAttack(from,thr);if(at===null)return;if(at==="skip"){from=A.total;continue}
+    const len=Math.floor(STRUM_S*A.sr),preLen=32768;
+    if(!await waitUntil(at+len))return;
+    const pre=at-preLen-1024>0&&A.total-(at-preLen-1024)<A.ring.length?read(at-preLen-1024,preLen):null;
+    strumRes=judgeStrum(analyseStrum(read(at,len),A.sr,pre));n++;drawStrum();
+    if(strumRes.st==="ok"){
+      goods++;beep();
+      if(untilGood){
+        // chord finished: every string passed and a clean strum. Stop listening so lifting your hand doesn't trigger warnings.
+        doneSet.add(chord);try{localStorage.setItem("fretcoach-done",JSON.stringify([...doneSet]))}catch(e){}
+        finishChord();
+        await speak(`${chord} complete.`,true);
+        return;
+      }
+      setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");
+      if(goods===1)await speak("Sounds good.");else if(goods%5===0)await speak(`${goods} clean strums.`);
+    }else{
+      setSay(strumRes.verdict,strumRes.st==="warn"?"Close":"Fix","fix");setPrompt(`Adjust, then strum ${chord} again.`);
+      await speak(strumRes.verdict);
+    }
+    from=after(0.25);
+  }
+}
+
+// ---------- controls ----------
+function setControls(){
+  $("start").textContent=running?"Pause listening":"Start listening";
+  $("skip").disabled=!running;$("strumBtn").disabled=!running;
+  $("strumBtn").setAttribute("aria-pressed",practice);
+  document.querySelectorAll(".chords button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.chord===chord);b.classList.toggle("done",doneSet.has(b.dataset.chord));b.setAttribute("aria-label",b.dataset.chord+(doneSet.has(b.dataset.chord)?", completed":""))});
+}
+async function start(){
+  try{await openMic()}catch(e){
+    setSay("I can't use the microphone here. Open this page in Safari and allow microphone access when asked.","Microphone blocked","fix");return false;
+  }
+  running=true;setControls();return true;
+}
+function finishChord(){
+  running=false;gen++;
+  if(A)A.waiters=A.waiters.filter(w=>!w(0,0));
+  closeMic();alive=liveFn();current=-1;practice=false;setControls();drawAll();
+  const left=Object.keys(CHORDS).filter(k=>!doneSet.has(k));
+  setSay(`${chord} complete. Every string rang and the strum sounded right.`,"Complete ✓","good");
+  setPrompt(left.length?`Pick another chord to keep going (${left.length} left). Tap ${chord} again to redo it.`:"All 8 chords complete. Tap any chord to practise it again.");
+}
+function pauseAll(){
+  running=false;gen++;stopSpeech();
+  if(A)A.waiters=A.waiters.filter(w=>!w(0,0));
+  closeMic();alive=liveFn();
+  current=-1;practice=false;if(calMode)endCal();setControls();drawAll();
+  setSay("Paused. Pick a chord or tap Start to continue.","Paused");setPrompt("");
+}
+// picking a chord always starts checking it; the tap itself is what lets the browser open the mic
+async function pickChord(k){
+  primeVoice();
+  chord=k;results=[];strumRes=null;current=-1;practice=false;setControls();drawAll();
+  setSay(`${k}: getting ready…`,"Starting");setPrompt("");
+  if(!running&&!await start())return;
+  runJob(()=>checkChord());
+}
+$("start").onclick=async()=>{
+  if(!running)primeVoice();
+  if(running)return pauseAll();
+  if(await start()){practice=false;setControls();runJob(checkChord)}
+};
+$("skip").onclick=()=>{skipFlag=true};
+$("strumBtn").onclick=()=>{
+  if(!running)return;
+  practice=!practice;setControls();
+  runJob(practice?()=>strumLoop():()=>checkChord());
+};
+$("calBtn").onclick=async()=>{
+  primeVoice();
+  if(calMode){if(running){runJob(async()=>{endCal();setSay("Calibration cancelled. Pick a chord.","Ready")})}return}
+  if(!running&&!await start())return;
+  practice=false;setControls();
+  runJob(async()=>{const ok=alive,done=await calibrate(ok);if(done&&ok())await checkChord(ok)});
+};
+// moving the slider yourself switches auto-adjust off, so your setting stays put
+function showAuto(){$("autoBoost").checked=autoBoost;$("boostNote").textContent=autoBoost?"Auto-adjust raises or lowers the boost after each pluck. Move the slider to set it yourself.":"Your setting stays fixed. Tick the box to let the app adjust it.";try{localStorage.setItem("fretcoach-autoboost",autoBoost?"1":"0")}catch(e){}}
+$("boost").oninput=e=>{autoBoost=false;showAuto();setBoost(+e.target.value)};
+$("autoBoost").onchange=e=>{autoBoost=e.target.checked;showAuto()};
+
+buildPicker();drawAll();setBoost(boostDb);showAuto();setControls();setSay("Pick a chord to start. The app listens on its own from there.","Ready");
+</script>
+
+</body>
+</html>
