@@ -195,7 +195,7 @@ const CAP_S=0.45, STRUM_S=0.8, TYPICAL_RING=0.6, TARGET=0.12;
 let chord="C", results=[], current=-1, calCurrent=-1, calMode=false, strumRes=null, voiceOn=false;   // voice is off for now
 let running=false, gen=0, skipFlag=false, practice=false;
 let doneSet=new Set(); try{doneSet=new Set(JSON.parse(localStorage.getItem("fretcoach-done")||"[]"))}catch(e){}
-let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&cal.v!==2)cal=null}catch(e){}
+let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&(cal.v!==2||!cal.s?.every(x=>x.raw&&x.hf!==undefined)))cal=null}catch(e){}
 let boostDb=18,autoBoost=true; try{const b=parseFloat(localStorage.getItem("fretcoach-boost"));if(isFinite(b))boostDb=b;autoBoost=localStorage.getItem("fretcoach-autoboost")!=="0"}catch(e){}
 // every job captures the generation it started in; starting a new job or pausing bumps it, so old jobs fall away at once
 const liveFn=()=>{const g=gen;return ()=>running&&g===gen};
@@ -240,7 +240,7 @@ function drawList(){
     const head=`<span class="sname">${st.n}<small>string ${6-i}</small></span>`;
     if(c.f[i]===-1)return `<li>${head}<span class="msg">Don't play this string.</span><span class="pill">skip</span></li>`;
     const r=results[i],exp=st.midi+c.f[i],want=c.f[i]===0?"open":`${FING[c.g[i]]} finger, fret ${c.f[i]}`;
-    let pill=`<span class="pill">waiting</span>`,msg=`Should be ${noteName(exp)} (${want}).`;
+    let pill=`<span class="pill">waiting</span>`,msg=c.f[i]===0?"Open: no fingers on this string.":`${cap(FING[c.g[i]])} finger, fret ${c.f[i]}.`;
     if(r){pill=`<span class="pill ${r.st}">${r.st==="ok"?"good":r.st==="warn"?"ok-ish":"fix"}</span>`;msg=`${r.text}<span class="heard">${r.heard}</span>`}
     if(i===current&&(!r||r.st==="fix"))pill=`<span class="pill now">pluck</span>`;
     return `<li class="${i===current?"now":""}">${head}<span class="msg">${msg}</span>${pill}</li>`;
@@ -266,7 +266,7 @@ function drawCal(){
 function drawStrum(){
   const el=$("strum");
   if(!strumRes){el.innerHTML=`<p class="msg">Once every string passes, strum the whole chord. It listens until the strum sounds right.</p>`;return}
-  const chips=strumRes.notes.map(n=>`<span class="chip ${n.shared?"":n.ok?"ok":"fix"}">${STR[n.i].n} · ${noteName(n.m)}</span>`).join("");
+  const chips=strumRes.notes.map(n=>`<span class="chip ${n.shared?"":n.ok?"ok":"fix"}">${STR[n.i].n} string</span>`).join("");
   el.innerHTML=`<div class="strumtop"><span class="pill ${strumRes.st}">${strumRes.st==="ok"?"sounds good":strumRes.st==="warn"?"close":"fix"}</span><span class="msg">${strumRes.verdict}</span></div><div class="chips">${chips}</div>${strumRes.fixes.length>1?`<ul class="more">${strumRes.fixes.slice(1).map(f=>`<li>${f}</li>`).join("")}</ul>`:""}`;
 }
 function drawAll(){drawChart();drawList();drawCal();drawStrum()}
@@ -326,7 +326,8 @@ function specOf(x,off,len,N=PN){
 function binPeak(mag,f,df,cents){const lo=Math.max(1,Math.floor(Math.min(f*Math.pow(2,-cents/1200),f-df)/df)),hi=Math.ceil(Math.max(f*Math.pow(2,cents/1200),f+df)/df);let bk=lo,bv=0;for(let k=lo;k<=hi&&k<mag.length-1;k++)if(mag[k]>bv){bv=mag[k];bk=k}return {k:bk,v:bv}}
 function analyse(seg,sr,pre,lo,hi){
   const df=sr/PN,o=Math.floor(0.03*sr);
-  const E=specOf(seg,o,PW),P=pre?specOf(pre,pre.length-PW,PW):null;
+  // 'before' = only the last ~0.09 s before the pluck (scaled up to match), so a string plucked just before still gets removed
+  const E=specOf(seg,o,PW),P=pre?specOf(pre,pre.length-4096,4096).map(v=>v*PW/4096):null;
   const New=P?E.map((v,k)=>Math.max(0,v-1.3*P[k])):E;
   const band=[];for(let k=Math.floor(70/df);k<2000/df;k++)band.push(E[k]);const floor=median(band)||1e-12;
   const pk=f=>binPeak(New,f,df,35).v, W=[0,1,1,0.8,0.6,0.5];
@@ -346,37 +347,47 @@ function analyse(seg,sr,pre,lo,hi){
   const f=num/den;
   // ring: the plucked note's own harmonics, late vs early, so other strings' sustain doesn't count
   const n2=8192,w2=4096,e1=specOf(seg,o,w2,n2),e2=specOf(seg,Math.floor(0.30*sr),w2,n2),d2f=sr/n2;
-  let ee=0,ll=0;for(let h=1;h<=3;h++){ee+=binPeak(e1,h*f,d2f,40).v;ll+=binPeak(e2,h*f,d2f,40).v}
-  return {f,ring:ee?ll/ee:0,peak,conf};
+  // Use only overtones that weren't already sounding from another string (a ringing string sharing an overtone
+  // would make a muted note look like it rings on).
+  const p1=pre?specOf(pre,pre.length-w2,w2,n2):null;
+  let hs=[1,2,3,4].filter(h=>!p1||binPeak(p1,h*f,d2f,40).v<0.25*binPeak(e1,h*f,d2f,40).v);if(!hs.length)hs=[1,2,3];
+  let ee=0,ll=0;for(const h of hs){ee+=binPeak(e1,h*f,d2f,40).v;ll+=binPeak(e2,h*f,d2f,40).v}
+  // buzz: a string slapping a fret adds sharp clicks, which show up as extra high-frequency energy (2–4.8 kHz)
+  // compared with the body of the note. Compared later against this string's clean calibration pluck.
+  const eb=specOf(seg,Math.floor(0.06*sr),w2,n2);let hiE=0,lo2=0;
+  for(let k=Math.floor(70/d2f);k<4800/d2f;k++){const m=Math.max(0,eb[k]-(p1?1.3*p1[k]:0)),e=m*m;if(k*d2f<1000)lo2+=e;else if(k*d2f>=2000)hiE+=e}
+  return {f,ring:ee?ll/ee:0,peak,conf,hf:lo2?hiE/lo2:0};
 }
 
 // ---------- the secret sauce: one string ----------
+// Plain-language result. "heard" is the small grey line under each string; no note names, since beginners don't need them.
 function diagnose(i,a){
   const c=CHORDS[chord],st=STR[i],fret=c.f[i],fing=FING[c.g[i]],exp=st.midi+fret,base=cal?.s?.[i];
   const nb=()=>{for(const j of [i-1,i+1])if(j>=0&&j<6&&c.f[j]>0)return j;return -1};
+  const muteFix=()=>{const j=nb();return fret>0?`Your ${fing} finger is muting the ${st.full}. Press firmly with the very tip and keep the finger arched.`:(j>=0?`The ${st.full} is being muted. Arch your ${FING[c.g[j]]} finger so it doesn't touch it.`:`The ${st.full} is being muted. Check your palm or thumb isn't resting on it.`)};
   if(!a.f){
-    const heard="No clear note";
-    if(fret>0)return {st:"fix",heard,text:`Your ${fing} finger on the ${st.full} isn't ringing. Press just behind fret ${fret} and arch your finger so the tip stands up.`};
-    const j=nb();
-    if(j>=0)return {st:"fix",heard,text:`The ${st.full} sounds muted. Arch your ${FING[c.g[j]]} finger so it doesn't touch the ${st.full}.`};
-    return {st:"fix",heard,text:`The ${st.full} isn't ringing clearly. Make sure your palm or thumb isn't resting on it.`};
+    if(fret>0)return {st:"fix",heard:"No clear note",text:`Your ${fing} finger on the ${st.full} isn't ringing. Press just behind fret ${fret} and arch your finger so the tip stands up.`};
+    return {st:"fix",heard:"No clear note",text:muteFix()};
   }
   const sm=semis(a.f),d=foldOct(sm-exp-(base?base.cents/100:0)),dr=Math.round(d);
-  const heard=`Heard ${noteName(sm)}, want ${noteName(exp)}${Math.abs(d)<0.5?` · ${tuneWords(d*100)} (${tuneLevel(d*100)})`:""}`;
   if(Math.abs(d)<0.4){
-    // right note. Only call it choked if it dies far faster than this string normally does.
-    const dead=a.ring<(base?base.ring*0.08:0.025),choked=a.ring<(base?base.ring*0.15:0.05);
-    if(dead){const j=nb();return {st:"fix",heard:heard+" · stops almost at once",text:fret>0?`Right note, but it's being muted. Press your ${fing} finger firmly and arch it.`:(j>=0?`The ${st.full} is being muted. Arch your ${FING[c.g[j]]} finger so it doesn't touch it.`:`The ${st.full} is being muted. Check your palm isn't resting on it.`)}}
-    return choked?{st:"warn",heard:heard+" · short ring",text:`Right note, but it stops quickly. Press a little firmer${fret>0?` with your ${fing} finger`:""}.`}:{st:"ok",heard,text:`${cap(st.full)} sounds good.`};
+    // right note. Muted: dies much faster than this string normally does. Buzzing: extra rattle between the overtones.
+    const ringBase=base?base.ring:TYPICAL_RING;
+    if(a.ring<ringBase*0.22)return {st:"fix",heard:"Right note, but it stopped almost at once",text:muteFix()};
+    if(base&&base.hf!==undefined&&a.hf>3*Math.max(base.hf,2e-4))
+      return {st:"fix",heard:"Right note, but with a buzz",text:fret>0?`The ${st.full} is buzzing. Move your ${fing} finger right up behind the fret and press a little harder.`:`The ${st.full} is buzzing. Check that no finger is lightly touching it.`};
+    if(a.ring<ringBase*0.4)return {st:"warn",heard:"Right note, rings a little short",text:`Right note, but it fades quickly. Press a little firmer${fret>0?` with your ${fing} finger`:""}.`};
+    return {st:"ok",heard:Math.abs(d)<0.1?"Sounded right":`Sounded right (${d>0?"a touch high":"a touch low"})`,text:`${cap(st.full)} sounds good.`};
   }
-  if(fret>0&&dr===-fret)return {st:"fix",heard,text:`That's the open string. Press your ${fing} finger down firmly on the ${st.full} at fret ${fret}.`};
-  if(Math.abs(d)<0.6)return {st:"warn",heard,text:`${cap(st.full)} is a little ${d>0?"sharp":"flat"}. Ease off the pressure a little.`};
-  if(fret>0&&Math.abs(dr)<=2&&fret+dr>=1){const n=Math.abs(dr);return {st:"fix",heard,text:`Move your ${fing} finger ${n} fret${n>1?"s":""} toward the ${dr>0?"headstock":"body"}, to fret ${fret}.`}}
+  const hl=d>0?"too high":"too low";
+  if(fret>0&&dr===-fret)return {st:"fix",heard:"Sounded like the open string",text:`That's the open string. Press your ${fing} finger down firmly on the ${st.full} at fret ${fret}.`};
+  if(Math.abs(d)<0.6)return {st:"warn",heard:`Sounded slightly ${d>0?"high":"low"}`,text:`${cap(st.full)} sounds slightly ${d>0?"high":"low"}. ${d>0?"Ease off the pressure a little.":"Check your tuning."}`};
+  if(fret>0&&Math.abs(dr)<=2&&fret+dr>=1){const n=Math.abs(dr);return {st:"fix",heard:`Sounded ${n} fret${n>1?"s":""} ${hl}`,text:`Move your ${fing} finger ${n} fret${n>1?"s":""} toward the ${dr>0?"headstock":"body"}, to fret ${fret}.`}}
   if(fret===0&&dr>0&&dr<=4){
     const j=nb();
-    return {st:"fix",heard,text:j>=0?`The ${st.full} should ring open. Your ${FING[c.g[j]]} finger is probably pressing it; lift and arch it.`:`The ${st.full} should ring open. Something is pressing it; lift that finger off.`};
+    return {st:"fix",heard:"Sounded higher than an open string",text:j>=0?`The ${st.full} should ring open. Your ${FING[c.g[j]]} finger is probably pressing it; lift and arch it.`:`The ${st.full} should ring open. Something is pressing it; lift that finger off.`};
   }
-  return {st:"fix",heard,text:fret>0?`Wrong note. Put your ${fing} finger on the ${st.full}, fret ${fret}.`:`Wrong note on the ${st.full}. Check that nothing touches it.`};
+  return {st:"fix",heard:`Sounded ${hl}`,text:fret>0?`Wrong spot. Put your ${fing} finger on the ${st.full}, fret ${fret}.`:`The ${st.full} doesn't sound right. Check that nothing touches it.`};
 }
 
 // ---------- the whole chord ----------
@@ -445,7 +456,7 @@ function judgeStrum(a){
   for(const e of [...a.extras].sort((x,y)=>x.f-y.f)){
     if(byBlamed(e.f))continue;
     // a clearly wrong note: higher than body boom, strong, and about as loud as the chord itself
-    if(e.f>=150&&e.v>=40&&raw(e.f)>=0.5*ref){heardF.push(e.f);fixes.push(`I hear a ${noteName(semis(e.f))} that isn't in ${chord}. A finger may be on the wrong fret; check the string list.`)}
+    if(e.f>=150&&e.v>=40&&raw(e.f)>=0.5*ref){heardF.push(e.f);fixes.push(`One note in the chord sounds wrong. A finger may be on the wrong fret or string. Check your fingers against the chart, or redo the string check.`)}
   }
   for(const n of a.notes)if(!n.ok&&!blamed.has(n.i)){
     const st=STR[n.i];
@@ -463,7 +474,7 @@ function judgeStrum(a){
 }
 
 // ---------- live audio ----------
-// mic → high-pass 70 Hz → low-pass 2.5 kHz → boost → continuous ring buffer (plucks are caught the instant they start)
+// mic → high-pass 70 Hz → low-pass 5 kHz (keeps fret-buzz clicks audible) → boost → continuous ring buffer (plucks are caught the instant they start)
 let A=null;
 function setBoost(db,thr){
   const old=boostDb;boostDb=Math.max(0,Math.min(42,Math.round(db)));
@@ -481,7 +492,7 @@ async function openMic(){
   const ctx=A?.ctx||window.__ctx||new (window.AudioContext||window.webkitAudioContext)();window.__ctx=ctx;await ctx.resume();
   const sr=ctx.sampleRate,src=ctx.createMediaStreamSource(stream),proc=ctx.createScriptProcessor(1024,1,1);
   const hp=ctx.createBiquadFilter();hp.type="highpass";hp.frequency.value=70;hp.Q.value=0.7;
-  const lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=2500;lp.Q.value=0.7;
+  const lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5000;lp.Q.value=0.7;
   const gain=ctx.createGain();gain.gain.value=Math.pow(10,boostDb/20);
   const st={ctx,stream,proc,src,gain,sr,ring:new Float32Array(Math.floor(sr*4)),total:0,levels:[],waiters:[]};
   proc.onaudioprocess=e=>{
@@ -497,14 +508,15 @@ async function openMic(){
 function closeMic(){try{A?.proc.disconnect();A?.src.disconnect();A?.stream.getTracks().forEach(t=>t.stop())}catch(e){}if(A)A.waiters=[];$("lvl").style.width="0"}
 const read=(start,len)=>{const o=new Float32Array(len),L=A.ring.length;for(let k=0;k<len;k++)o[k]=A.ring[((start+k)%L+L)%L];return o};
 const waitUntil=idx=>{const ok=alive;return new Promise(res=>A.waiters.push(()=>{if(!ok()){res(false);return true}if(A.total>=idx){res(true);return true}return false}))};
-function nextAttack(from,thr){
+// need(): how loud a real pluck is expected to be right now; finger taps and string squeaks stay well below it
+function nextAttack(from,thr,need){
   let loudest=0,since=from;const ok=alive;
   return new Promise(res=>A.waiters.push((v,at)=>{
     if(!ok()){res(null);return true}
     if(skipFlag){skipFlag=false;res("skip");return true}
     if(at<from)return false;
     const prev=A.levels.slice(-7,-1),mn=prev.length?Math.min(...prev):0;
-    if(v>thr.v&&v>mn*1.6){res(Math.max(0,at-256));return true}
+    if(v>thr.v&&v>mn*1.6&&(!need||v>need())){res(Math.max(0,at-256));return true}
     loudest=Math.max(loudest,v/Math.max(mn,1e-6));
     if(at-since>3*A.sr){if(autoBoost&&loudest>2&&boostDb<42){setBoost(boostDb+6,thr);setPrompt("Turned the mic up. Pluck again.")}loudest=0;since=at}
     return false;
@@ -515,15 +527,19 @@ async function noiseFloor(){
   const vals=[],ok=alive;await new Promise(res=>A.waiters.push(v=>{vals.push(v);if(vals.length>=12||!ok()){res();return true}return false}));
   return {v:Math.max(1e-5,median(vals)*3)};
 }
-async function hear(thr,from,lo,hi){
-  const at=await nextAttack(from,thr);if(at===null||at==="skip")return at;
+async function hear(thr,from,lo,hi,need){
+  const at=await nextAttack(from,thr,need);if(at===null||at==="skip")return at;
   const len=Math.floor(CAP_S*A.sr);if(!await waitUntil(at+len))return null;
   const ps=at-PW-512,pre=ps>0&&A.total-ps<A.ring.length?read(ps,PW):null;
-  const a=analyse(read(at,len),A.sr,pre,lo,hi);
+  const a=analyse(read(at,len),A.sr,pre,lo,hi);a.gainDb=boostDb;   // the boost this pluck was heard at (auto-level may change it next)
   if(autoBoost&&a.peak>0&&(a.peak<TARGET/3||a.peak>0.5))setBoost(boostDb+Math.max(-12,Math.min(12,20*Math.log10(TARGET/a.peak))),thr);
   return a;
 }
 const after=s=>A.total+Math.floor(s*A.sr);
+// a real pluck's level on string i at the current boost (from calibration), and a strum's (the typical string)
+const gainNow=()=>Math.pow(10,boostDb/20);
+const pluckLvl=i=>cal?.s?.[i]?.raw?cal.s[i].raw*gainNow():0;
+const strumLvl=()=>cal?.s?median(cal.s.map(x=>x.raw||0))*gainNow():0;
 
 // ---------- jobs: one at a time; starting a new one (another chord, pause) drops the old one instantly ----------
 function runJob(fn){
@@ -546,7 +562,7 @@ async function calibrate(ok=alive){
     while(ok()&&!r){
       const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+1);if(a===null)break;from=after(0.12);
       if(a==="skip"){r={cents:0,ring:TYPICAL_RING,peak:0};break}
-      if(a.f){const cents=foldOct(semis(a.f)-STR[i].midi)*100;if(Math.abs(cents)<150)r={cents,ring:a.ring,peak:a.peak}}
+      if(a.f){const cents=foldOct(semis(a.f)-STR[i].midi)*100;if(Math.abs(cents)<150)r={cents,ring:a.ring,peak:a.peak,raw:a.peak/Math.pow(10,a.gainDb/20),hf:a.hf}}
       if(!r)setPrompt(`Didn't catch a clear note. Pluck the open ${STR[i].full} again.`);
     }
     if(!r)break;s[i]=r;setPrompt("");beep();
@@ -565,14 +581,16 @@ async function checkChord(ok=alive){
   results=[];strumRes=null;current=playable()[0];drawAll();
   setSay(`Hold ${chord}, then pluck the ${STR[current].full}.`,`${chord} · string ${6-current}`);setPrompt("");
   const thr=await noiseFloor();if(!ok())return;
-  let from=A.total;
+  let from=after(0.6);
   for(const i of playable()){
     let tries=0,missed=0;
     while(ok()){
       current=i;drawChart();drawList();
       if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${chord} · string ${6-i}`);setPrompt("")}
-      const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12);if(a===null)return;
+      const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12,()=>0.3*pluckLvl(i));if(a===null)return;
       if(a==="skip"){results[i]=null;from=A.total;break}
+      // no clear note and quieter than half a normal pluck: hand noise while setting up, so just keep listening
+      if(!a.f&&cal?.s?.[i]?.raw&&a.peak/Math.pow(10,a.gainDb/20)<0.5*cal.s[i].raw){from=after(0.05);continue}
       // a pluck with no clear note at all is often a bad catch, not a muted string: ask once more before blaming a finger
       if(!a.f&&missed===0&&!tries){missed++;setPrompt(`Didn't catch that clearly. Pluck the ${STR[i].full} again.`);from=after(0.1);continue}
       const r=diagnose(i,a);results[i]=r;drawChart();drawList();
@@ -601,11 +619,13 @@ async function strumLoop(thr,from,untilGood,ok=alive){
   let n=0,goods=0;
   while(ok()){
     if(!n){setSay(`Strum the whole ${chord} chord and let it ring.`,"Strum");setPrompt("")}
-    const at=await nextAttack(from,thr);if(at===null)return;if(at==="skip"){from=A.total;continue}
+    const at=await nextAttack(from,thr,()=>0.35*strumLvl());if(at===null)return;if(at==="skip"){from=A.total;continue}
     const len=Math.floor(STRUM_S*A.sr),preLen=32768;
     if(!await waitUntil(at+len))return;
     const pre=at-preLen-1024>0&&A.total-(at-preLen-1024)<A.ring.length?read(at-preLen-1024,preLen):null;
-    strumRes=judgeStrum(analyseStrum(read(at,len),A.sr,pre));n++;drawStrum();
+    const seg=read(at,len);
+    if(rms(seg,Math.floor(0.03*A.sr),Math.floor(0.11*A.sr))<0.45*strumLvl()){from=after(0.05);continue}   // too quiet for a strum: setup noise
+    strumRes=judgeStrum(analyseStrum(seg,A.sr,pre));n++;drawStrum();
     if(strumRes.st==="ok"){
       goods++;beep();
       if(untilGood){
