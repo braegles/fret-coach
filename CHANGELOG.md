@@ -2,6 +2,22 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v37 — 2026-10-17 · David's Claude (Issue #15, branch david/readable-tips, stacked on #16)
+- Fix tips stay on screen long enough to read. After a tip in the string check or a bad strum, the app now waits
+  about 3–6 s (longer tips get longer) before it listens again, instead of 0.6 s. A thin yellow bar under the message
+  drains while it waits; tapping the message skips the wait.
+- The same problem twice in a row keeps the tip and just counts it ("Fix · try 4 · same problem ×2"), with a short
+  1.2 s wait, since it has already been read.
+- "Close, but…" tips shown after a string passes (e.g. a slight buzz) also get reading time; before, the next string's
+  prompt wiped them after 0.35 s.
+- New: `readPause(text, again)`, `readMs(text)`, `endRead()`; `.status.reading` bar in CSS. Replaces `pause()` from v36.
+  Starting another job or pausing ends any wait at once.
+- Chord-change drills are not changed (the clock is running there, so no waiting).
+- No detection logic changed (analyse / diagnose / judgeStrum untouched), but it changes how quickly the app reacts:
+  **please try it on a real guitar before merging.**
+- Tested in a browser with fake plucks arriving every 150 ms: a long tip stayed 5.9 s, a short one 4.1 s, a repeat
+  1.2 s with the counter, tapping skipped early, passing strings flowed as before, no script errors.
+
 ## v36 — 2026-10-17 · David's Claude (Issue #2, branch david/cleanup)
 - Code cleanup, behaviour unchanged. Removed:
   - the old voice code (`voiceOn`, `speak()`, `stopSpeech()`, `speakDone`). The voice was always off, so `speak()`
