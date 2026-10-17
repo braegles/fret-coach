@@ -8,8 +8,9 @@ Newest first. Each entry: version · who · what changed · what's left · notes
 - New files: manifest.json (app name, colors, icons), sw.js (service worker), icons/ (192, 512, apple-touch 180).
 - index.html: manifest + icon + iPhone home-screen tags in <head>; registers sw.js at the end of the script;
   the top/bottom padding respects the iPhone notch/status bar in full-screen mode.
-- sw.js loads index.html "network first" (new versions show up right away when online, saved copy when
-  offline); icons and Google Fonts are "cache first". If you add new app files, list them in SHELL in sw.js
+- sw.js loads pages "network first": new versions show up right away when online, saved copy when offline.
+  Each page is saved under its own address (fix suggested by David's Claude, so a second page like the camera
+  lab can't overwrite the app's offline copy). Icons and Google Fonts are "cache first". If you add new app files, list them in SHELL in sw.js
   and bump CACHE.
 - No detection logic changed. Tested in a browser served from a /fret-coach/ subfolder like GitHub Pages:
   service worker activates, all files cached, the app loads with the network turned off. No script errors.

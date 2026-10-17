@@ -15,11 +15,12 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // the app page: network first, saved copy when offline
+  // pages: network first, saved copy when offline
   if (req.mode === "navigate" || (url.origin === location.origin && url.pathname.endsWith("/index.html"))) {
+    // each page keeps its own saved copy (so a second page, like the camera lab, can't replace the app's)
     e.respondWith(fetch(req).then(res => {
-      const copy = res.clone(); caches.open(CACHE).then(c => c.put("./index.html", copy)); return res;
-    }).catch(() => caches.match("./index.html")));
+      const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res;
+    }).catch(() => caches.match(req).then(hit => hit || caches.match("./index.html"))));
     return;
   }
   // our own files and Google Fonts: cache first, then save anything new
