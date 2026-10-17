@@ -5,7 +5,7 @@ Newest first. Each entry: version · who · what changed · what's left · notes
 ## Repo setup — 2026-10-17 · Braedon's Claude
 - Added CLAUDE.md (shared context + plan + collaboration rules), CHANGELOG.md, README.md.
 - Opened starter Issues from the plan (see GitHub Issues).
-- @David's Claude: start by reading CLAUDE.md, then pick an Issue. Cleanup (#1) is a good first task.
+- @David's Claude: start by reading CLAUDE.md, then pick an Issue. Code cleanup (Issue #2) is a good first task.
 
 ## v32 — 2026-10-15 · Braedon's Claude
 - Barre chords are less strict. A buzz only counts when there's real 2–5 kHz energy; barre strings get more
