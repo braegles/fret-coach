@@ -219,7 +219,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v36</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v37</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -280,6 +280,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 
   <section class="card settings">
     <h2>Setup</h2>
+    <label class="autob" for="voiceOn"><input type="checkbox" id="voiceOn"> Voice coach: say tips out loud</label>
+    <label class="boost" for="voiceRate"><span>Voice speed</span><input type="range" id="voiceRate" min="0.7" max="1.4" step="0.05"><span id="voiceRateVal" class="mono"></span></label>
+    <button class="btn" id="voiceTest" type="button">Test the voice</button>
+    <p class="note" id="voiceNote">One tip at a time, with a short pause between tips. Plucks are ignored while it talks. Turn your phone's volume up, and make sure the side switch isn't on silent.</p>
     <label class="boost" for="boost"><span>Mic boost</span><input type="range" id="boost" min="0" max="42" step="1"><span id="boostVal" class="mono"></span></label>
     <label class="autob" for="autoBoost"><input type="checkbox" id="autoBoost"> Adjust automatically</label>
     <p class="note" id="boostNote"></p>
@@ -494,6 +498,82 @@ function setTuneText(big,sub,kind=""){
 // a short pause after a fix message, so it stays on screen before the app listens again
 // (this used to be the leftover voice code, which only waited 0.6 s while the voice was off). Skipped if the job has stopped.
 const pause=(ms=600,ok=alive)=>ok()?sleep(ms):Promise.resolve();
+
+// ---------- voice coach (Issue #19) ----------
+// Speaks tips with the phone's built-in text-to-speech (Web Speech API: speechSynthesis), so your eyes can stay on the guitar.
+// Pacing rules, all enforced here so every part of the app behaves the same:
+//  - one line at a time, never cut itself off
+//  - at least GAP_MS of quiet after a line ends before the next one starts
+//  - no backlog: if lines pile up, only the newest is spoken
+//  - the same tip again within 30 s is said in a short form ("Still the D string. Ring finger.")
+//  - the mic ignores plucks while it talks (and just after), so you're never judged on something played mid-sentence
+const coach=(()=>{
+  const S=("speechSynthesis" in window)?window.speechSynthesis:null,GAP_MS=2200,REPEAT_MS=30000;
+  let on=true,rate=1,voice=null,unlocked=false,speaking=false,lastEnd=0,lastTip="",lastTipAt=0,tipSeq=0,latest=null,looping=false,finish=null;
+  const wins=[];   // [startSample, endSample|null]: stretches of mic input recorded while it was talking
+  try{const v=JSON.parse(localStorage.getItem("fretcoach-voice")||"null");if(v){on=v.on!==false;if(isFinite(v.rate))rate=v.rate}}catch(e){}
+  const save=()=>{try{localStorage.setItem("fretcoach-voice",JSON.stringify({on,rate}))}catch(e){}};
+  const now=()=>performance.now(),quiet=()=>!speaking&&now()-lastEnd>=GAP_MS,sample=()=>A?A.total:0;
+  // a clear English voice; Apple's built-in ones first
+  function pickVoice(){
+    if(!S)return;const vs=S.getVoices().filter(v=>/^en[-_]?/i.test(v.lang));if(!vs.length)return;
+    const pref=[/Samantha/,/Ava/,/Allison/,/Karen/,/Daniel/,/Google US English/,/en[-_]US/];
+    voice=null;for(const re of pref){voice=vs.find(v=>re.test(v.name)||re.test(v.lang));if(voice)break}
+    voice=voice||vs[0];
+  }
+  if(S){pickVoice();try{S.addEventListener("voiceschanged",pickVoice)}catch(e){}}
+  // spoken form: chord symbols read as words, no arrows or tick marks
+  const SUF={m:" minor","7":" seven",m7:" minor seven",maj7:" major seven","5":" five"};
+  function speakable(t){
+    return t.replace(/✓/g,"").replace(/→/g," to ").replace(/·/g,",").replace(/\bBPM\b/g,"beats per minute")
+      .replace(/(\d+(?:\.\d+)?) s\b/g,"$1 seconds")
+      .replace(/\b([A-G])([♭♯]?)(maj7|m7|m|7|5)?(?=[\s,.!?:;)]|$)/g,(w,n,acc,suf)=>!acc&&!suf?w:n+(acc==="♭"?" flat":acc==="♯"?" sharp":"")+(suf?SUF[suf]:""))
+      .replace(/\s+/g," ").trim();
+  }
+  function utter(text){
+    return new Promise(res=>{
+      speaking=true;const w=[sample(),null];wins.push(w);if(wins.length>30)wins.shift();
+      let done=false;const fin=()=>{if(done)return;done=true;speaking=false;w[1]=sample();lastEnd=now();if(finish===fin)finish=null;res()};
+      finish=fin;
+      try{
+        const u=new SpeechSynthesisUtterance(speakable(text));u.rate=rate;if(voice){u.voice=voice;u.lang=voice.lang}else u.lang="en-US";
+        u.onend=fin;u.onerror=fin;S.speak(u);
+        setTimeout(fin,Math.min(15000,2500+text.length*85/rate));   // safety net: some browsers never fire onend
+      }catch(e){fin()}
+    });
+  }
+  // background loop for non-blocking lines: waits for quiet, then says only the newest line
+  async function run(){
+    if(looping)return;looping=true;
+    while(latest){while(!quiet()&&latest)await sleep(100);if(!latest)break;const t=latest;latest=null;await utter(t)}
+    looping=false;
+  }
+  return {
+    get on(){return on},get rate(){return rate},get supported(){return !!S},
+    setOn(v){on=!!v;save();if(!on)this.stop()},setRate(v){rate=Math.max(0.7,Math.min(1.4,v));save()},
+    // iPhone Safari only lets a page talk after a tap: call this from a tap handler once (a silent line)
+    unlock(){if(!S||unlocked)return;try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;S.speak(u);unlocked=true}catch(e){}},
+    // a fix tip. The caller waits (the app doesn't listen meanwhile). Voice off: the old 0.6 s pause so the tip stays up.
+    async tip(text,short,ok=alive){
+      if(!on||!S){await pause(600,ok);return}   // voice off: the same short pause as before
+      const t=text===lastTip&&now()-lastTipAt<REPEAT_MS&&short?short:text;lastTip=text;
+      const id=++tipSeq;latest=null;   // a tip outranks any waiting background line
+      while(!quiet()){await sleep(100);if(id!==tipSeq||!ok())return}
+      if(!ok())return;
+      await utter(t);lastTipAt=now();
+    },
+    // a short non-blocking line (a prompt, a well done). If things pile up, only the newest is said.
+    say(text){if(!on||!S)return;latest=text;run()},
+    // good news: only if it's quiet right now, otherwise skip it (never delays practice)
+    cheer(text){if(!on||!S||!quiet()||latest)return;utter(text)},
+    test(){this.unlock();if(!S)return false;latest=null;try{S.cancel()}catch(e){}if(finish)finish();lastEnd=0;utter("Hi! I'm your guitar coach. I'll tell you what to fix, one tip at a time.");return true},
+    // stop talking now (pause, switching jobs). Drops anything waiting.
+    stop(){latest=null;tipSeq++;try{S&&S.cancel()}catch(e){}if(finish)finish()},
+    // true if mic sample position `at` was recorded while it was talking (or within 0.35 s after)
+    blocks(at){if(!A)return false;const pad=0.35*A.sr;for(const [s0,e] of wins)if(at>=s0-0.05*A.sr&&(e===null||at<=e+pad))return true;return false},
+    speakable
+  };
+})();
 
 // ---------- pitch (YIN) ----------
 function yin(buf,sr){
@@ -785,6 +865,7 @@ function nextAttack(from,thr,need,ratio=1.6){
     if(!ok()){res(null);return true}
     if(skipFlag){skipFlag=false;res("skip");return true}
     if(at<from)return false;
+    if(coach.blocks(at))return false;   // that sound is the voice coach talking, not the guitar
     const prev=A.levels.slice(-7,-1),mn=prev.length?Math.min(...prev):0;
     if(v>thr.v&&v>mn*ratio&&(!need||v>need())){res(Math.max(0,at-256));return true}
     loudest=Math.max(loudest,v/Math.max(mn,1e-6));
@@ -813,7 +894,7 @@ const strumLvl=()=>cal?.s?median(cal.s.map(x=>x.raw||0))*gainNow():0;
 
 // ---------- jobs: one at a time; starting a new one (another chord, pause) drops the old one instantly ----------
 function runJob(fn){
-  gen++;skipFlag=false;drillOn=false;if(typeof setBeat==="function")setBeat(0);
+  gen++;skipFlag=false;coach.stop();drillOn=false;if(typeof setBeat==="function")setBeat(0);
   if(A)A.waiters=A.waiters.filter(w=>!w(0,0));   // wake the old job's listeners so it can exit
   alive=liveFn();
   (async()=>{try{await fn()}catch(e){console.error(e)}})();
@@ -919,7 +1000,7 @@ async function checkChord(ok=alive){
       }
       tries++;missed=0;
       setSay(r.text,`Fix · try ${tries+1}`,"fix");setPrompt(`${r.heard}. Adjust, then pluck the ${STR[i].full} again.`);
-      await pause();
+      {const f=blameFinger(chord,i);await coach.tip(r.text,`Still the ${STR[i].full}.${f?` ${cap(f)} finger.`:""}`,ok)}
       from=after(0.25);
     }
     if(!ok())return;
@@ -949,10 +1030,10 @@ async function strumLoop(thr,from,untilGood,ok=alive){
     if(strumRes.st==="ok"){
       goods++;beep();
       if(untilGood){doneSet.add(chord);finishChord();return}
-      setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");
+      setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");coach.cheer(goods>1?"Clean again.":"Sounds good.");
     }else{
       setSay(strumRes.verdict,strumRes.st==="warn"?"Close":"Fix",strumRes.st==="warn"?"warn":"fix");setPrompt(`Adjust, then strum ${lab(chord)} again.`);
-      await pause();
+      {const miss=strumRes.notes.filter(x=>!x.ok&&!x.shared).map(x=>STR[x.i].full);await coach.tip(strumRes.verdict,miss.length?`Still missing the ${miss.join(" and the ")}.`:"Almost. Strum it again.",ok)}
     }
     from=after(0.25);
   }
@@ -1076,13 +1157,13 @@ async function changeDrill(seq,ok=alive){
       times.push(secs);(per[prev+"→"+target]=per[prev+"→"+target]||[]).push(secs);const onTime=secs<=targetSecs(bpm);
       if(onTime){streak++;fails=0}else{streak=0}
       let msg=`${tn} ✓ ${secs.toFixed(1)} s${onTime?" (on time)":" (a bit slow)"}`;
-      if(streak>=3&&bpm<160){bpm+=6;streak=0;msg+=` · speeding up to ${bpm} BPM`;setBeat(bpm)}
+      if(streak>=3&&bpm<160){bpm+=6;streak=0;msg+=` · speeding up to ${bpm} BPM`;setBeat(bpm);coach.say("Nice. Speeding up.")}
       setSay(msg+`. Now ${nm[next]}!`,onTime?"Clean change":"Clean, keep going",onTime?"good":"warn");setPrompt("");
       beep();lastAt=at;idx=next;
     }else{
       fails++;streak=0;
       const late=missing.length?blameFinger(target,missing[0]):null;
-      setSay(late?`Your ${late} finger landed late. ${r.verdict}`:r.verdict,`Change to ${tn} · fix`,"fix");
+      setSay(late?`Your ${late} finger landed late. ${r.verdict}`:r.verdict,`Change to ${tn} · fix`,"fix");coach.say(late?`${cap(late)} finger, late on ${tn}.`:`Check ${tn}.`);
       if(fails>=2&&bpm>40){bpm=Math.max(40,bpm-6);fails=0;setBeat(bpm);setPrompt(`Slowing down to ${bpm} BPM. Strum ${tn} again once it's set.`)}
       else setPrompt(`Strum ${tn} again once your fingers are set. The clock is still running.`);
     }
@@ -1132,20 +1213,21 @@ function setControls(){
   document.querySelectorAll(".chords button").forEach(b=>{const k=b.dataset.chord,d=doneSet.has(k);b.setAttribute("aria-pressed",k===chord);b.classList.toggle("done",d);b.setAttribute("aria-label",lab(k)+(d?", completed":""))});
 }
 async function start(){
+  coach.unlock();   // the tap that starts listening also lets the voice talk on iPhone
   try{await openMic()}catch(e){
     setSay("I can't use the microphone here. Open this page in Safari and allow microphone access when asked.","Microphone blocked","fix");return false;
   }
   running=true;setControls();return true;
 }
 function stopListening(){
-  running=false;gen++;drillOn=false;setBeat(0);
+  running=false;gen++;coach.stop();drillOn=false;setBeat(0);
   if(A)A.waiters=A.waiters.filter(w=>!w(0,0));
   closeMic();alive=liveFn();current=-1;practice=false;if(tuning)endTuner();setControls();drawAll();
 }
 function finishChord(){
   stopListening();
   const gname={Basic:"basic","7ths":"7th",Barre:"barre",Power:"power"}[groupOf(chord)],left=GROUPS[groupOf(chord)].filter(k=>!doneSet.has(k));
-  setSay(`${lab(chord)} complete ✓`,"Complete","good");
+  setSay(`${lab(chord)} complete ✓`,"Complete","good");coach.say(`${lab(chord)} sounds great. Nice work!`);
   setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. Try another group, or tap any chord to practise it again.`);
 }
 function pauseAll(){stopListening();setSay("Paused.","Paused");setPrompt("Pick a chord or tap Start listening to continue.")}
@@ -1237,6 +1319,11 @@ $("boost").oninput=e=>{autoBoost=false;showAuto();setBoost(+e.target.value)};
 $("autoBoost").onchange=e=>{autoBoost=e.target.checked;showAuto()};
 function setMuteAt(v){muteAt=Math.max(5,Math.min(50,Math.round(v)));$("muteAt").value=muteAt;$("muteVal").textContent=muteAt+"%";try{localStorage.setItem("fretcoach-muteat",muteAt);localStorage.setItem("fretcoach-mutever","2")}catch(e){}}
 $("muteAt").oninput=e=>setMuteAt(+e.target.value);
+function showVoice(){$("voiceOn").checked=coach.on;$("voiceRate").value=coach.rate;$("voiceRateVal").textContent=coach.rate.toFixed(2)+"×";$("voiceRate").disabled=$("voiceTest").disabled=!coach.on||!coach.supported;
+  if(!coach.supported)$("voiceNote").textContent="This browser can't speak. Tips still show on screen."}
+$("voiceOn").onchange=e=>{coach.setOn(e.target.checked);showVoice()};
+$("voiceRate").oninput=e=>{coach.setRate(+e.target.value);showVoice()};
+$("voiceTest").onclick=()=>coach.test();
 
 SLOTS.forEach(id=>$(id).onchange=showPairStats);
 $("chStart").onclick=()=>startChanges(readSeq().seq);
@@ -1246,7 +1333,7 @@ $("clearHist").onclick=()=>{if(!clearArmed){clearArmed=true;$("clearHist").textC
   clearArmed=false;LOG=[];try{localStorage.removeItem(LOG_KEY)}catch(e){};$("clearHist").textContent="Cleared";setTimeout(()=>$("clearHist").textContent="Clear history",1500);drawHabits()};
 fillPairs();drawHabits();
 {let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
-buildPicker();drawAll();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
+buildPicker();drawAll();setBoost(boostDb);showAuto();setMuteAt(muteAt);showVoice();setControls();
 setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
 if(!cal&&stored("fretcoach-onboarded")!=="1")showOnboard(0);
 

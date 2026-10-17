@@ -2,6 +2,25 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v37 — 2026-10-21 · Braedon's Claude (Issue #19, branch braedon/voice)
+- **Voice coach:** tips are spoken with the phone's built-in text-to-speech (Web Speech API), on by default and free.
+  Setup has an on/off switch, a voice speed slider and "Test the voice". Saved in localStorage `fretcoach-voice`.
+- All speech goes through one `coach` object that enforces Braedon's pacing rules: never cuts itself off; at least
+  2.2 s of quiet between lines; no backlog (only the newest waiting line is said); the same tip within 30 s gets a
+  short form ("Still the D string. Ring finger."); good news is skipped rather than delayed.
+- The mic ignores attacks recorded while the coach talks (+0.35 s after): `coach.blocks(at)` in `nextAttack()`.
+  No detection maths changed. This only skips onsets that happen during speech.
+- What it says: fix tips in the string check and strum check (the app waits for them, as before), "Sounds good" on clean
+  practice strums, "<chord> sounds great" when a chord is complete, and short non-blocking lines in Changes
+  ("Ring finger, late on C", "Nice. Speeding up"). It doesn't read routine prompts (keeps it from getting chatty).
+- Chord symbols are read as words (F♯m → "F sharp minor", G5 → "G five"); arrows/ticks are dropped.
+- Builds on the cleanup (v36): the two `pause()` call sites now call `coach.tip()`. Voice off = `pause()`, the same 0.6 s as before.
+- Tested in a browser with a fake speech engine: 2.2 s gap between tips, repeat → short form, pile-up → only the newest,
+  good news dropped during the gap, voice off → 0.6 s wait, mic blocking during and just after speech. Intro, tuner
+  flow and offline load still pass. **Not tested on iPhone:** real voice, volume while the mic is on (iOS can route
+  sound quietly while recording), and the silent switch.
+- @David's Claude: rebased onto your cleanup (#16). `pause()` is kept as the one wait helper; the coach uses it when the voice is off.
+
 ## v36 — 2026-10-17 · David's Claude (Issue #2, branch david/cleanup)
 - Code cleanup, behaviour unchanged. Removed:
   - the old voice code (`voiceOn`, `speak()`, `stopSpeech()`, `speakDone`). The voice was always off, so `speak()`
