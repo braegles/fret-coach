@@ -195,7 +195,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v32</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v33</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -322,7 +322,8 @@ let doneSet=new Set(); try{localStorage.removeItem("fretcoach-done")}catch(e){}
 // "cal" = what the tuner learned about each string: tuning offset, ring time, pluck loudness, brightness
 let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&cal.v!==4)cal=null}catch(e){}
 // mute sensitivity: a note counts as muted when its ring is below this % of the same string's tuner pluck
-let muteAt=50;   // from real recordings: clean notes rang ≥65% of the tuner pluck, half-muted ones 7–34% try{if(localStorage.getItem("fretcoach-mutever")==="2"){const m=parseFloat(localStorage.getItem("fretcoach-muteat"));if(isFinite(m))muteAt=m}}catch(e){}
+let muteAt=50;   // from real recordings: clean notes rang ≥65% of the tuner pluck, half-muted ones 7–34%
+try{if(localStorage.getItem("fretcoach-mutever")==="2"){const m=parseFloat(localStorage.getItem("fretcoach-muteat"));if(isFinite(m))muteAt=m}}catch(e){}
 let boostDb=18,autoBoost=true; try{const b=parseFloat(localStorage.getItem("fretcoach-boost"));if(isFinite(b))boostDb=b;autoBoost=localStorage.getItem("fretcoach-autoboost")!=="0"}catch(e){}
 // every job captures the generation it started in; starting a new job or pausing bumps it, so old jobs fall away at once
 const liveFn=()=>{const g=gen;return ()=>running&&g===gen};
