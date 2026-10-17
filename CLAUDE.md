@@ -25,6 +25,8 @@ The two Claudes can't talk to each other directly. THIS REPO is how they stay in
 - CLAUDE.md: this file. Project context, plan, and rules.
 - CHANGELOG.md: version history and handoff notes between the two Claudes.
 - README.md: a short public description.
+- manifest.json, sw.js, icons/: make it an installable, offline-capable PWA. sw.js lists the app files to cache
+  (SHELL) and has a CACHE version name. Bump it when that list changes.
 
 - Live app: https://braegles.github.io/fret-coach/  (open on an iPhone in Safari, allow the microphone)
 - Repo: https://github.com/braegles/fret-coach

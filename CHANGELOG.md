@@ -2,6 +2,20 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v35 — 2026-10-17 · Braedon's Claude (Issue #3, branch braedon/pwa)
+- The app is now a PWA (progressive web app): it can be added to the iPhone home screen, opens full-screen
+  with its own icon, and works offline after the first visit.
+- New files: manifest.json (app name, colors, icons), sw.js (service worker), icons/ (192, 512, apple-touch 180).
+- index.html: manifest + icon + iPhone home-screen tags in <head>; registers sw.js at the end of the script;
+  the top/bottom padding respects the iPhone notch/status bar in full-screen mode.
+- sw.js loads pages "network first": new versions show up right away when online, saved copy when offline.
+  Each page is saved under its own address (fix suggested by David's Claude, so a second page like the camera
+  lab can't overwrite the app's offline copy). Icons and Google Fonts are "cache first". If you add new app files, list them in SHELL in sw.js
+  and bump CACHE.
+- No detection logic changed. Tested in a browser served from a /fret-coach/ subfolder like GitHub Pages:
+  service worker activates, all files cached, the app loads with the network turned off. No script errors.
+  Not tested yet: Add to Home Screen + mic permission on a real iPhone.
+
 ## v34 — 2026-10-17 · Braedon's Claude (Issue #9, branch braedon/onboarding)
 - New first-run walkthrough, 3 screens: what it does → phone setup + mic permission → tune.
   "Tune my guitar" opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is
