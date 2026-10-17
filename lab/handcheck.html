@@ -174,10 +174,10 @@ export function check(chordDef,tips){
 // ---------- page ----------
 const sel=$("chord");sel.innerHTML=Object.keys(GROUPS).map(g=>`<optgroup label="${g}">${GROUPS[g].map(k=>`<option value="${k}">${lab(k)}</option>`).join("")}</optgroup>`).join("");
 try{sel.value=localStorage.getItem("fretcoach-lab-chord")||"C"}catch(e){}
-sel.onchange=()=>{try{localStorage.setItem("fretcoach-lab-chord",sel.value)}catch(e){}};
+sel.onchange=()=>{hist=[];try{localStorage.setItem("fretcoach-lab-chord",sel.value)}catch(e){}};
 let corners=null;try{corners=JSON.parse(localStorage.getItem("fretcoach-lab-neck")||"null")}catch(e){}
 let H=corners?homography(corners,[[0,0],[0,1],[1,0],[1,1]]):null;
-let stream=null,facing="user",landmarker=null,running=false,calStep=-1,taps=[];
+let stream=null,facing="user",landmarker=null,running=false,calStep=-1,taps=[],hist=[];
 const video=$("video"),cv=$("overlay"),ctx=cv.getContext("2d");
 function say(text,phase,kind=""){$("say").textContent=text;$("phase").textContent=phase;$("status").className="status "+kind}
 const CAL=["Tap where the LOW E string (the thickest) meets the nut.","Tap where the HIGH e string (the thinnest) meets the nut.","Tap the LOW E string at the 4th fret.","Tap the HIGH e string at the 4th fret."];
@@ -204,7 +204,7 @@ $("startBtn").onclick=async()=>{
   running=true;requestAnimationFrame(loop);
 };
 $("flipBtn").onclick=async()=>{facing=facing==="user"?"environment":"user";try{await startCam()}catch(e){};say("Camera switched. Mark the neck again, since the picture moved.","Mark the neck");H=null};
-$("calBtn").onclick=()=>{calStep=0;taps=[];say(CAL[0],"Mark the neck · 1 of 4")};
+$("calBtn").onclick=()=>{calStep=0;taps=[];hist=[];say(CAL[0],"Mark the neck · 1 of 4")};
 // taps on the picture → camera-pixel coordinates (undoing the mirror and the crop to fill the box)
 $("view").addEventListener("click",ev=>{
   if(calStep<0||!video.videoWidth)return;
@@ -213,7 +213,7 @@ $("view").addEventListener("click",ev=>{
   if($("view").classList.contains("mirror"))x=vw-x;
   taps.push([x/vw,y/vh]);calStep++;
   if(calStep<4){say(CAL[calStep],`Mark the neck · ${calStep+1} of 4`);return}
-  calStep=-1;corners=taps;H=homography(corners,[[0,0],[0,1],[1,0],[1,1]]);
+  calStep=-1;hist=[];corners=taps;H=homography(corners,[[0,0],[0,1],[1,0],[1,1]]);
   try{localStorage.setItem("fretcoach-lab-neck",JSON.stringify(corners))}catch(e){}
   say(H?"Neck marked. Hold the chord.":"Those points didn't make a usable shape. Tap Mark the neck and try again.",H?"Watching":"Try again",H?"good":"fix");
 });
@@ -237,7 +237,7 @@ export function unrotate(p,deg,w,h){   // normalized point in the turned picture
 
 // ---------- live loop ----------
 const dbg={};window.__handcheck={dbg,get H(){return H},get corners(){return corners}};   // for testing in the browser console
-let frames=0,seenFrames=0,lastStat=performance.now(),hist=[];
+let frames=0,seenFrames=0,lastStat=performance.now();
 function loop(){
   if(!running)return;
   if(video.readyState>=2&&landmarker){
@@ -246,7 +246,7 @@ function loop(){
     if(hand){seenFrames++;missStreak=0;if(rotDeg)hand=hand.map(p=>unrotate(p,rotDeg,video.videoWidth,video.videoHeight))}
     else if(++missStreak>15){rotDeg=(rotDeg+90)%360;missStreak=0}
     draw(hand);
-    if(H&&hand){
+    if(H&&hand&&calStep<0){
       // fingertip cells, smoothed over the last 8 frames so one jittery frame doesn't flip the answer
       const tips={};for(const g of [1,2,3,4]){const p=hand[TIP[g]];tips[g]=cell(apply(H,[p.x,p.y]))}
       dbg.tips=tips;dbg.uv=[1,2,3,4].map(g=>apply(H,[hand[TIP[g]].x,hand[TIP[g]].y]));
