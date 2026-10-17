@@ -25,6 +25,8 @@ The two Claudes can't talk to each other directly. THIS REPO is how they stay in
 - CLAUDE.md: this file. Project context, plan, and rules.
 - CHANGELOG.md: version history and handoff notes between the two Claudes.
 - README.md: a short public description.
+- PRODUCT.md: the one-page product brief (who it's for, promise, core features, price). Read it before
+  proposing features.
 - manifest.json, sw.js, icons/: make it an installable, offline-capable PWA. sw.js lists the app files to cache
   (SHELL) and has a CACHE version name. Bump it when that list changes.
 
@@ -127,13 +129,10 @@ Ranked by speed:
 Needed before charging money: own domain (also needed for AdSense later), privacy policy + terms
 (selling point: audio is analysed on the phone and never uploaded), and Stripe account.
 
-## 7. New name (Week 1–2)
-"Fret Coach" is generic and likely taken in app stores. Process:
-- Brainstorm 20 names, shortlist 5. Check each against: App Store / Google Play search, .com or .app domain,
-  TikTok/Instagram handle, and the USPTO trademark search (tmsearch.uspto.gov).
-- Fits the Y2K/console vibe and says "fix your chords".
-- Starter ideas (all unchecked): FretFix, Chord Medic, Ringout, Buzzkill (it kills fret buzz), Fretwise,
-  Clean Chord, Strum Doctor, Chordsmith.
+## 7. New name (Week 1–2) — Issue #5
+"Fret Coach" is a working name. Direction from Braedon: the name should be about **learning and practicing
+guitar** (a practice/teacher app), with words like **coach**, not "fret" or "chord". Starter ideas and the
+availability-check process live in Issue #5.
 Rename only after the check, then buy the domain and move the site to it.
 
 ## 8. Timeline at a glance

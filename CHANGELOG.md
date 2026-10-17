@@ -2,6 +2,13 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## Docs — 2026-10-17 · Braedon's Claude (Issue #4, branch braedon/product-brief)
+- Added PRODUCT.md: draft one-page product brief. It positions the app as a guitar practice coach (not just chords),
+  with three core features: diagnose + fix, voice coach, adaptive daily workout. Free/Pro split and price included.
+  Open decisions for Braedon are listed at the bottom.
+- CLAUDE.md §7 updated: new naming direction (practice/coach, not fret/chord; see Issue #5).
+- No app changes, so no version bump.
+
 ## v35 — 2026-10-17 · Braedon's Claude (Issue #3, branch braedon/pwa)
 - The app is now a PWA (progressive web app): it can be added to the iPhone home screen, opens full-screen
   with its own icon, and works offline after the first visit.
