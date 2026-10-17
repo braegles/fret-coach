@@ -75,6 +75,12 @@ button:focus-visible,input:focus-visible,summary:focus-visible,select:focus-visi
 /* long tips switch from the all-caps display face to bold sentence case so they're easy to read mid-chord */
 .say.long{font-family:var(--f-ui);font-weight:bold;font-size:18px;line-height:1.3;letter-spacing:0;text-transform:none}
 .prompt{margin:0;font-size:14px;color:var(--muted)}
+/* reading time for a tip: a thin LED bar drains while the app waits; tapping the message skips it */
+.status{position:relative;cursor:default}
+.status.reading{cursor:pointer}
+.status.reading::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--warn);transform-origin:left;animation:readbar var(--readms,3s) linear forwards}
+@keyframes readbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.status.reading::after{animation:none}}
 .prompt:empty{display:none}
 .detail{margin:0;font:12px var(--f-mono);color:var(--wire);opacity:.85}
 .detail:empty{display:none}
@@ -210,7 +216,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v36</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v37</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -482,9 +488,25 @@ function setTuneText(big,sub,kind=""){
   $("tsub").textContent=sub??"Let it ring. The needle shows if it's too low or too high.";
 }
 
-// a short pause after a fix message, so it stays on screen before the app listens again
-// (this used to be the leftover voice code, which only waited 0.6 s while the voice was off). Skipped if the job has stopped.
-const pause=(ms=600,ok=alive)=>ok()?sleep(ms):Promise.resolve();
+// ---------- reading time for tips (Issue #15) ----------
+// After a fix tip, the app waits long enough to read it before it listens again, so the next sound can't replace it.
+// About 3 s for a short tip, up to 6 s for a long one. Tapping the message skips the wait.
+// A tip the player has already read (the same problem again) only gets a short wait.
+const readMs=t=>Math.max(3000,Math.min(6000,1500+t.length*45));
+let tipSkip=null;
+function readPause(text,again=false,ok=alive){
+  if(!ok())return Promise.resolve();
+  const ms=again?1200:readMs(text),el=$("status");
+  if(tipSkip)tipSkip();   // only one wait at a time
+  el.classList.remove("reading");void el.offsetWidth;   // restart the bar's animation
+  el.style.setProperty("--readms",ms+"ms");el.classList.add("reading");
+  return new Promise(res=>{
+    const done=()=>{clearTimeout(timer);if(tipSkip===done)tipSkip=null;el.classList.remove("reading");res()};
+    const timer=setTimeout(done,ms);tipSkip=done;
+  });
+}
+const endRead=()=>{if(tipSkip)tipSkip()};
+$("status").addEventListener("click",endRead);
 
 // ---------- pitch (YIN) ----------
 function yin(buf,sr){
@@ -804,7 +826,7 @@ const strumLvl=()=>cal?.s?median(cal.s.map(x=>x.raw||0))*gainNow():0;
 
 // ---------- jobs: one at a time; starting a new one (another chord, pause) drops the old one instantly ----------
 function runJob(fn){
-  gen++;skipFlag=false;drillOn=false;if(typeof setBeat==="function")setBeat(0);
+  gen++;skipFlag=false;endRead();drillOn=false;if(typeof setBeat==="function")setBeat(0);
   if(A)A.waiters=A.waiters.filter(w=>!w(0,0));   // wake the old job's listeners so it can exit
   alive=liveFn();
   (async()=>{try{await fn()}catch(e){console.error(e)}})();
@@ -889,7 +911,7 @@ async function checkChord(ok=alive){
   const thr=await noiseFloor();if(!ok())return;
   let from=after(0.6);
   for(const i of playable()){
-    let tries=0,missed=0,mutedOnce=false;
+    let tries=0,missed=0,mutedOnce=false,lastTip="",repeats=0;
     while(ok()){
       current=i;drawBoard();
       if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt("")}
@@ -906,11 +928,17 @@ async function checkChord(ok=alive){
       mutedOnce=false;results[i]=r;drawBoard();logEvent({type:"pluck",chord,i,kind:kindOf(r)});
       if(r.st!=="fix"){
         beep();setSay(tries?`Fixed. ${cap(STR[i].full)} sounds good.`:`${cap(STR[i].full)} sounds good.`,`${lab(chord)} · string ${6-i}`,"good");setPrompt(r.st==="warn"?r.text:"");
-        await sleep(350);from=after(0.1);break;
+        // a "close, but…" tip shows under the result: give it reading time too, or the next string's prompt wipes it at once
+        if(r.st==="warn")await readPause(r.text);else await sleep(350);
+        from=after(0.1);break;
       }
       tries++;missed=0;
-      setSay(r.text,`Fix · try ${tries+1}`,"fix");setPrompt(`${r.heard}. Adjust, then pluck the ${STR[i].full} again.`);
-      await pause();
+      // the same problem again: keep the tip (already read), just count it
+      const again=r.text===lastTip;repeats=again?repeats+1:1;lastTip=r.text;
+      setSay(r.text,`Fix · try ${tries+1}${repeats>1?` · same problem ×${repeats}`:""}`,"fix");
+      setPrompt(`${r.heard}. Read the tip, then adjust. Tap the message to skip the wait.`);
+      await readPause(r.text,again);if(!ok())return;
+      setPrompt(`${r.heard}. Adjust, then pluck the ${STR[i].full} again.`);
       from=after(0.25);
     }
     if(!ok())return;
@@ -924,7 +952,7 @@ async function checkChord(ok=alive){
 async function strumLoop(thr,from,untilGood,ok=alive){
   if(!thr){setSay(`Strum ${lab(chord)}.`,"Strum practice");setPrompt("");thr=await noiseFloor();from=A.total}
   current=-1;drawBoard();
-  let n=0,goods=0;
+  let n=0,goods=0,lastVerdict="";
   while(ok()){
     if(!n&&!untilGood){setSay(`Strum the whole ${lab(chord)} chord and let it ring.`,"Strum practice");setPrompt("")}
     const at=await nextAttack(from,thr,()=>0.35*strumLvl());if(at===null)return;if(at==="skip"){from=A.total;continue}
@@ -942,8 +970,10 @@ async function strumLoop(thr,from,untilGood,ok=alive){
       if(untilGood){doneSet.add(chord);finishChord();return}
       setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");
     }else{
-      setSay(strumRes.verdict,strumRes.st==="warn"?"Close":"Fix",strumRes.st==="warn"?"warn":"fix");setPrompt(`Adjust, then strum ${lab(chord)} again.`);
-      await pause();
+      const again=strumRes.verdict===lastVerdict;lastVerdict=strumRes.verdict;
+      setSay(strumRes.verdict,strumRes.st==="warn"?"Close":"Fix",strumRes.st==="warn"?"warn":"fix");setPrompt("Read the tip, then adjust. Tap the message to skip the wait.");
+      await readPause(strumRes.verdict,again);if(!ok())return;
+      setPrompt(`Adjust, then strum ${lab(chord)} again.`);
     }
     from=after(0.25);
   }
@@ -1129,7 +1159,7 @@ async function start(){
   running=true;setControls();return true;
 }
 function stopListening(){
-  running=false;gen++;drillOn=false;setBeat(0);
+  running=false;gen++;endRead();drillOn=false;setBeat(0);
   if(A)A.waiters=A.waiters.filter(w=>!w(0,0));
   closeMic();alive=liveFn();current=-1;practice=false;if(tuning)endTuner();setControls();drawAll();
 }
