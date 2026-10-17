@@ -15,9 +15,6 @@ show progress, and make short daily practice easy to come back to.
 
 **Also:** returning players brushing up, and guitar teachers who want a "homework checker" for students.
 
-*Note:* if we market to kids under 13, privacy rules for children's apps (e.g. COPPA in the US) apply once we add
-accounts or payments. Today nothing leaves the phone, but plan for it before launching accounts.
-
 ## The problem
 - Beginners can hear that something sounds bad but not **why**: which string, which finger.
 - Videos can't hear you. Teachers cost money every week and aren't there when you practice.
