@@ -75,6 +75,8 @@ button:focus-visible,input:focus-visible,summary:focus-visible,select:focus-visi
 .status.good .phase::before{background:var(--good)} .status.fix .phase::before{background:var(--bad)} .status.warn .phase::before{background:var(--warn)}
 .status.good .phase{color:var(--good)} .status.fix .phase{color:var(--bad)} .status.warn .phase{color:var(--warn)}
 .say{margin:0;font-family:var(--f-disp);font-weight:400;font-size:22px;line-height:1.12;letter-spacing:.01em;text-transform:uppercase;text-wrap:pretty}
+/* long tips switch from the all-caps display face to bold sentence case so they're easy to read mid-chord */
+.say.long{font-family:var(--f-ui);font-weight:bold;font-size:18px;line-height:1.3;letter-spacing:0;text-transform:none}
 .prompt{margin:0;font-size:14px;color:var(--muted)}
 .prompt:empty{display:none}
 .detail{margin:0;font:12px var(--f-mono);color:var(--wire);opacity:.85}
@@ -132,6 +134,23 @@ body:not([data-screen="tuner"]) .tuner{display:none}
 .seq select:disabled{opacity:1}
 .seq .slot.now select{background:linear-gradient(180deg,#8fb5ff 0%,var(--blue) 50%,#0b2b8e 100%);color:#fff}
 .seq .slot.now span{color:var(--wire)}
+/* first-run walkthrough: a chrome-framed console panel over a dimmed screen */
+.onboard{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.78)}
+.onboard[hidden]{display:none}
+.onboard .card{width:100%;max-width:440px;padding:16px;display:grid;gap:14px}
+.ob-steps{display:flex;gap:6px}
+.ob-steps i{width:28px;height:8px;background:#000;border:1px solid #39456b;box-shadow:var(--bevel-in)}
+.ob-steps i.on{background:var(--wire);border-color:#000}
+.ob-kicker{font:12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--yellow)}
+.onboard h2{margin:0;font-family:var(--f-disp);font-weight:400;font-size:30px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:#fff;text-shadow:2px 2px 0 #000}
+#obBody{display:grid;gap:12px}
+.onboard p{margin:0;font-size:15.5px;line-height:1.5}
+.onboard ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:15px}
+.onboard .controls{grid-template-columns:1fr 1fr}
+.onboard .ob-skip{background:none;border:0;color:var(--muted);font:13px var(--f-ui);text-decoration:underline;cursor:pointer;justify-self:center;min-height:40px}
+.chords button.hint{outline:3px solid var(--yellow);outline-offset:2px;animation:hintPulse 1.2s steps(2) infinite}
+@keyframes hintPulse{50%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.chords button.hint{animation:none}}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .beats{display:flex;gap:8px;justify-content:center}
 .beats i{width:22px;height:12px;background:#000;border:1px solid #39456b;box-shadow:var(--bevel-in)}
@@ -195,7 +214,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v33</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v34</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -262,6 +281,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
     <label class="boost" for="muteAt"><span>Muted below</span><input type="range" id="muteAt" min="5" max="50" step="1"><span id="muteVal" class="mono"></span></label>
     <p class="note">Compare with the "ring" number in the grey line after each pluck. Clean notes should land above this setting and half-muted ones below. Raise it if half-mutes pass; lower it if clean notes fail.</p>
     <p class="note">Point the bottom edge of your phone (where the mic is) at the sound hole, 20–40 cm away.</p>
+    <button class="btn" id="obReplay" type="button">Show the intro again</button>
+  </section>
+</div>
+
+<div class="onboard" id="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="obTitle">
+  <section class="card">
+    <div class="ob-steps" aria-hidden="true"><i></i><i></i><i></i></div>
+    <span class="ob-kicker" id="obKicker"></span>
+    <h2 id="obTitle"></h2>
+    <div id="obBody"></div>
+    <div class="controls"><button class="btn" id="obBack" type="button">Back</button><button class="btn primary" id="obNext" type="button" style="grid-column:auto">Next</button></div>
+    <button class="ob-skip" id="obSkip" type="button">Skip intro</button>
   </section>
 </div>
 
@@ -338,12 +369,12 @@ function buildPicker(){
   $("cgroups").querySelectorAll("button").forEach(b=>b.onclick=()=>{curGroup=b.dataset.g;buildPicker()});
   $("chords").innerHTML="";
   GROUPS[curGroup].forEach(k=>{
-    const b=document.createElement("button");b.type="button";b.textContent=lab(k);b.dataset.chord=k;if(lab(k).length>3)b.className="long";b.onclick=()=>pickChord(k);
+    const b=document.createElement("button");b.type="button";b.textContent=lab(k);b.dataset.chord=k;if(lab(k).length>3)b.className="long";if(k==="Em"&&firstChordPending())b.classList.add("hint");b.onclick=()=>pickChord(k);
     $("chords").appendChild(b);
   });
   setControls();
 }
-function setSay(text,phase,kind=""){$("say").textContent=text;if(phase!==undefined)$("phase").textContent=phase;$("status").className="status "+kind}
+function setSay(text,phase,kind=""){$("say").textContent=text;$("say").classList.toggle("long",text.length>38);if(phase!==undefined)$("phase").textContent=phase;$("status").className="status "+kind}
 function setPrompt(t){$("prompt").textContent=t||""}
 // measurement readout: ring = how long the note lasted vs this string's tuner pluck; bright = brightness vs tuner pluck
 function showDetail(i,a){const b=cal?.s?.[i];const parts=[`${STR[i].n} string`];
@@ -1126,6 +1157,7 @@ function finishChord(){
 function pauseAll(){stopListening();setSay("Paused.","Paused");setPrompt("Pick a chord or tap Start listening to continue.")}
 // picking a chord always starts checking it; the tap itself is what lets the browser open the mic
 async function pickChord(k){
+  clearFirstChordHint();
   if(screen!=="chords")setScreen("chords");
   if(groupOf(k)!==curGroup){curGroup=groupOf(k);buildPicker()}
   chord=k;results=[];strumRes=null;current=-1;practice=false;setControls();drawAll();
@@ -1152,7 +1184,7 @@ function setScreen(name){screen=name;document.body.dataset.screen=name;
 async function openTuner(){
   if(!running&&!await start())return;
   practice=false;prevScreen=screen==="tuner"?prevScreen:screen;
-  runJob(async()=>{await tuneGuitar();if(running){stopListening();setSay(cal?"Tuned. Pick a chord.":"Pick a chord to start.","Ready","good");setPrompt("")}});
+  runJob(async()=>{await tuneGuitar();if(running){stopListening();if(cal&&firstChordPending())guideFirstChord();else{setSay(cal?"Tuned. Pick a chord.":"Pick a chord to start.","Ready","good");setPrompt("")}}});
 }
 // switching screens stops whatever was listening; the Tuner key starts the tuner (the tap lets the browser open the mic)
 async function goTo(name){
@@ -1166,6 +1198,44 @@ async function goTo(name){
   if(name==="changes"){setSay("Pick 2 to 4 chords and tap Start changes.","Changes");setPrompt("")}
 }
 document.querySelectorAll("#menu button").forEach(b=>b.onclick=()=>goTo(b.dataset.go));
+// ---------- first-run walkthrough ----------
+// Shown once to new users (no tuner calibration yet): what it does → phone setup + mic → tune.
+// The last button opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is highlighted as the first chord.
+const OB=[
+  {k:"Welcome · 1 of 3",t:"Your guitar coach that listens",b:`<p>Hold a chord and pluck one string at a time. Fret Coach hears each string and tells you exactly what to fix.</p><ul><li>A string that's <b>muted</b> by a finger touching it</li><li>A note that <b>buzzes</b></li><li>A finger on the <b>wrong fret</b>, and which finger it is</li></ul><p>Then it checks the whole strum and times your chord changes.</p>`},
+  {k:"Setup · 2 of 3",t:"Set up your phone",b:`<ul><li>Put your phone about <b>20–40 cm</b> (8–16 in) from the sound hole, with the bottom edge (where the mic is) pointing at it.</li><li>Play somewhere quiet. Background music and TV confuse it.</li><li>When Safari asks, tap <b>Allow</b> for the microphone.</li></ul><p>The sound is analysed on your phone. Nothing is recorded or uploaded.</p>`},
+  {k:"Tune · 3 of 3",t:"Tune first",b:`<p>The tuner gets each string in tune and learns how <b>your</b> guitar sounds in <b>your</b> room, so the checks are fair. It takes about a minute.</p><p>Pluck each open string when it asks, and let it ring.</p>`,next:"Tune my guitar"}
+];
+let obStep=0;
+const store=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},stored=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const firstChordPending=()=>stored("fretcoach-firstchord")==="pending";
+function showOnboard(i){
+  obStep=i;const s=OB[i];$("onboard").hidden=false;
+  $("obKicker").textContent=s.k;$("obTitle").textContent=s.t;$("obBody").innerHTML=s.b;
+  $("obNext").textContent=s.next||"Next";$("obBack").disabled=i===0;
+  document.querySelectorAll(".ob-steps i").forEach((d,j)=>d.className=j<=i?"on":"");
+  $("obNext").focus();
+}
+function closeOnboard(){$("onboard").hidden=true;store("fretcoach-onboarded","1")}
+$("obBack").onclick=()=>{if(obStep>0)showOnboard(obStep-1)};
+$("obSkip").onclick=closeOnboard;
+$("obNext").onclick=()=>{
+  if(obStep<OB.length-1)return showOnboard(obStep+1);
+  closeOnboard();store("fretcoach-firstchord","pending");
+  if(screen!=="chords")setScreen("chords");goTo("tuner");
+};
+$("obReplay").onclick=()=>showOnboard(0);
+// guided first chord: Em is the easiest (two fingers, every string played)
+function guideFirstChord(){
+  if(screen!=="chords")setScreen("chords");
+  chord="Em";results=[];strumRes=null;current=-1;
+  if(curGroup!=="Basic"){curGroup="Basic";buildPicker()}else setControls();
+  drawAll();
+  document.querySelector('.chords button[data-chord="Em"]')?.classList.add("hint");
+  setSay("Tuned! Now your first chord: tap Em, the flashing key.","First chord","good");
+  setPrompt("Em is the easiest one: just two fingers, and you play all six strings.");
+}
+function clearFirstChordHint(){document.querySelectorAll(".chords button.hint").forEach(b=>b.classList.remove("hint"));if(firstChordPending())store("fretcoach-firstchord","done")}
 $("tunerDone").onclick=()=>{tuning=false};   // saves, then returns to the screen you came from
 // moving the slider yourself switches auto-adjust off, so your setting stays put
 function showAuto(){$("autoBoost").checked=autoBoost;$("boostNote").textContent=autoBoost?"Auto-adjust raises or lowers the boost after each pluck. Move the slider to set it yourself.":"Your setting stays fixed. Tick the box to let the app adjust it.";try{localStorage.setItem("fretcoach-autoboost",autoBoost?"1":"0")}catch(e){}}
@@ -1184,6 +1254,7 @@ fillPairs();drawHabits();
 {let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
 buildPicker();drawAll();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
 setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
+if(!cal&&stored("fretcoach-onboarded")!=="1")showOnboard(0);
 
 // background: a warped green wireframe, drawn once per screen size (static, so it costs nothing while listening)
 (function(){

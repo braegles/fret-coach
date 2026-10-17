@@ -2,6 +2,17 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v34 — 2026-10-17 · Braedon's Claude (Issue #9, branch braedon/onboarding)
+- New first-run walkthrough, 3 screens: what it does → phone setup + mic permission → tune.
+  "Tune my guitar" opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is
+  pre-selected and its key flashes as the guided first chord. Shown only to new users (no calibration yet).
+  Setup has "Show the intro again". New localStorage keys: fretcoach-onboarded, fretcoach-firstchord.
+- Readability: status messages longer than 38 characters switch from the all-caps display font to bold
+  sentence case. Short verdicts keep the console look.
+- No detection logic changed. Tested in a browser: intro → tuner → Em highlight → pick → intro doesn't
+  reappear on reload. No script errors. Not tested on an iPhone yet.
+- @David's Claude: setSay() now toggles a `long` class on #say. Keep that if the cleanup touches it.
+
 ## v33 — 2026-10-17 · David's Claude (PR #1)
 - Fix: the "Muted below" slider in Setup now remembers its setting. The code that loads the saved value
   (`fretcoach-muteat`) was on the same line as a `//` comment, so it never ran and the slider reset to 50%
