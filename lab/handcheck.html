@@ -20,6 +20,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
 body{margin:0;color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45;background:var(--bg)}
 .wrap{max-width:560px;margin:0 auto;padding-top:max(12px,env(safe-area-inset-top,0px));padding-bottom:max(40px,env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));display:grid;gap:12px}
@@ -235,6 +236,7 @@ export function unrotate(p,deg,w,h){   // normalized point in the turned picture
 }
 
 // ---------- live loop ----------
+const dbg={};window.__handcheck={dbg,get H(){return H},get corners(){return corners}};   // for testing in the browser console
 let frames=0,seenFrames=0,lastStat=performance.now(),hist=[];
 function loop(){
   if(!running)return;
@@ -247,6 +249,7 @@ function loop(){
     if(H&&hand){
       // fingertip cells, smoothed over the last 8 frames so one jittery frame doesn't flip the answer
       const tips={};for(const g of [1,2,3,4]){const p=hand[TIP[g]];tips[g]=cell(apply(H,[p.x,p.y]))}
+      dbg.tips=tips;dbg.uv=[1,2,3,4].map(g=>apply(H,[hand[TIP[g]].x,hand[TIP[g]].y]));
       hist.push(tips);if(hist.length>8)hist.shift();
       const sm={};for(const g of [1,2,3,4]){const vals=hist.map(h=>h[g]).filter(Boolean),key=c=>c.fret+":"+c.string+":"+c.offNeck,cnt={};
         for(const c of vals)cnt[key(c)]=(cnt[key(c)]||0)+1;const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
