@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fret Coach Lab: Hand Check</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Share+Tech+Mono&display=swap">
+<style>
+/* Prototype for Issue #8. Same console look as the app: hard chrome edges, LEDs, dark screens. Not linked from the app yet. */
+:root{
+  --bg:#000; --screen:#06102c; --screen2:#020818; --ink:#e8eef8; --muted:#97a4bd; --line:#2a3a66;
+  --wire:#2bff5a; --blue:#1f5bff; --red:#d8222e; --yellow:#ffe14a; --good:#3dff6e; --bad:#ff3b3b;
+  --metal:linear-gradient(180deg,#f7f9fc 0%,#d3d9e3 38%,#8d97a8 50%,#c9d0db 70%,#eef1f6 100%);
+  --metal-dark:linear-gradient(180deg,#9aa4b4 0%,#5b6578 48%,#2c3446 52%,#4c5669 100%);
+  --bevel:inset 2px 2px 0 rgba(255,255,255,.85),inset -2px -2px 0 rgba(0,0,0,.55);
+  --bevel-in:inset 2px 2px 0 rgba(0,0,0,.6),inset -2px -2px 0 rgba(255,255,255,.35);
+  --f-disp:"Anton","Impact","Arial Narrow Bold",sans-serif; --f-ui:Verdana,Tahoma,Geneva,sans-serif; --f-mono:"Share Tech Mono","Courier New",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{margin:0;color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;padding-top:max(12px,env(safe-area-inset-top,0px));padding-bottom:max(40px,env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));display:grid;gap:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--metal);border:1px solid #000;box-shadow:var(--bevel),0 4px 0 #000}
+.word{font-family:var(--f-disp);font-size:28px;line-height:.95;text-transform:uppercase;font-style:italic;color:#fff;background:linear-gradient(180deg,#9fc0ff 0%,#2b63ff 48%,#0a2a9a 52%,#4f86ff 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1.5px #000;paint-order:stroke fill}
+.tag{font:12px var(--f-mono);padding:1px 6px;background:#000;color:var(--yellow);border:1px solid #444;text-transform:uppercase;letter-spacing:.1em}
+.back{font:bold 12px var(--f-ui);color:#101624;text-transform:uppercase;letter-spacing:.06em}
+.card{background:linear-gradient(180deg,var(--screen),var(--screen2));border:6px solid transparent;border-image:linear-gradient(180deg,#f7f9fc,#aab3c2 45%,#555f72 55%,#c9d0db) 1;box-shadow:0 0 0 1px #000,0 5px 0 #000;padding:10px;display:grid;gap:10px}
+h2{margin:0;justify-self:start;font-family:var(--f-disp);font-weight:400;font-size:17px;letter-spacing:.08em;text-transform:uppercase;padding:3px 12px;background:var(--metal);color:#101624;border:1px solid #000;box-shadow:var(--bevel)}
+.view{position:relative;background:#000;border:1px solid #39456b;box-shadow:var(--bevel-in);aspect-ratio:4/3;max-width:100%;overflow:hidden;touch-action:manipulation}
+.view video,.view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.view.mirror video,.view.mirror canvas{transform:scaleX(-1)}
+.view .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;font:13px var(--f-mono);color:var(--muted)}
+.status{padding:10px;border:1px solid #000;box-shadow:var(--bevel-in);background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px),#01040e;display:grid;gap:4px}
+.phase{display:flex;align-items:center;gap:8px;font:13px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--yellow)}
+.phase::before{content:"";width:12px;height:12px;border:1px solid #000;background:var(--blue)}
+.status.good .phase{color:var(--good)} .status.good .phase::before{background:var(--good)}
+.status.fix .phase{color:var(--bad)} .status.fix .phase::before{background:var(--bad)}
+.say{margin:0;font-weight:bold;font-size:16px}
+.small{margin:0;font:12px var(--f-mono);color:var(--wire)}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.btn{min-height:46px;border:1px solid #000;background:var(--metal);color:#101624;font-weight:bold;font-size:13px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;padding:0 6px;box-shadow:var(--bevel),0 3px 0 #000}
+.btn.primary{background:linear-gradient(180deg,#ff6a5c 0%,var(--red) 50%,#8e0d16 100%);color:#fff;font-family:var(--f-disp);font-weight:400;font-size:19px;letter-spacing:.06em;text-shadow:2px 2px 0 #000}
+.btn:active{box-shadow:var(--bevel-in);transform:translateY(2px)}
+.btn:disabled{opacity:.45}
+button:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+select{min-height:46px;width:100%;border:1px solid #000;border-radius:0;background:var(--metal);color:#101624;font-family:var(--f-disp);font-size:20px;text-align:center;box-shadow:var(--bevel),0 3px 0 #000}
+ol.fingers{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+ol.fingers li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;background:#020714;border:1px solid var(--line);border-left:6px solid var(--line);font-size:14px}
+ol.fingers li.ok{border-left-color:var(--good)} ol.fingers li.fix{border-left-color:var(--bad)} ol.fingers li.none{border-left-color:var(--yellow)}
+ol.fingers b{font-family:var(--f-mono);font-weight:400;white-space:nowrap}
+.note{margin:0;font:12.5px/1.5 var(--f-mono);color:var(--muted);padding:8px 10px;border-left:4px solid var(--blue);background:rgba(2,7,20,.7)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.stats div{background:#000;border:1px solid #2a3a66;padding:6px;text-align:center}
+.stats b{display:block;font:22px var(--f-mono);color:var(--wire);font-variant-numeric:tabular-nums}
+.stats span{font:11px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div style="display:grid;gap:2px"><span class="word">Fret Coach</span><span class="tag">Lab · Hand check · prototype</span></div><a class="back" href="../">← App</a></div>
+
+  <section class="card">
+    <div class="view mirror" id="view">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="empty" id="empty">Prop your phone up so the front camera sees the guitar neck and your fretting hand, then tap Start camera.</div>
+    </div>
+    <div class="status" id="status"><span class="phase" id="phase">Ready</span><p class="say" id="say">Tap Start camera.</p><p class="small" id="small"></p></div>
+    <div class="row">
+      <button class="btn primary" id="startBtn" type="button" style="grid-column:1/-1">Start camera</button>
+      <button class="btn" id="calBtn" type="button" disabled>Mark the neck</button>
+      <button class="btn" id="flipBtn" type="button" disabled>Switch camera</button>
+      <select id="chord" aria-label="Chord to check"></select>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Your fingers</h2>
+    <ol class="fingers" id="fingers"><li class="none"><span>Mark the neck first, then hold the chord.</span></li></ol>
+  </section>
+
+  <section class="card">
+    <h2>Feasibility check</h2>
+    <div class="stats"><div><b id="fps">–</b><span>frames / s</span></div><div><b id="seen">–</b><span>hand seen</span></div><div><b id="steady">–</b><span>steady</span></div></div>
+    <p class="note">What to try: different lighting (lamp, daylight, dim room), phone angles and distances, and every chord. Write down when it gets fingers wrong. Below about 10 frames a second, or a hand that's seen less than 80% of the time, it's probably not usable on that phone. Nothing is recorded or uploaded: the video stays on the phone.</p>
+  </section>
+</div>
+
+<script type="module">
+// ---------- chords (copied from index.html v34; keep in sync until the app is split into files) ----------
+const CHORDS={
+  // basic open chords
+  C:{f:[-1,3,2,0,1,0],g:[0,3,2,0,1,0]},
+  G:{f:[3,2,0,0,0,3],g:[2,1,0,0,0,3]},
+  D:{f:[-1,-1,0,2,3,2],g:[0,0,0,1,3,2]},
+  A:{f:[-1,0,2,2,2,0],g:[0,0,1,2,3,0]},
+  E:{f:[0,2,2,1,0,0],g:[0,2,3,1,0,0]},
+  Am:{f:[-1,0,2,2,1,0],g:[0,0,2,3,1,0]},
+  Em:{f:[0,2,2,0,0,0],g:[0,2,3,0,0,0]},
+  Dm:{f:[-1,-1,0,2,3,1],g:[0,0,0,2,3,1]},
+  // sevenths
+  A7:{f:[-1,0,2,0,2,0],g:[0,0,2,0,3,0]},
+  B7:{f:[-1,2,1,2,0,2],g:[0,2,1,3,0,4]},
+  C7:{f:[-1,3,2,3,1,0],g:[0,3,2,4,1,0]},
+  D7:{f:[-1,-1,0,2,1,2],g:[0,0,0,2,1,3]},
+  E7:{f:[0,2,0,1,0,0],g:[0,2,0,1,0,0]},
+  G7:{f:[3,2,0,0,0,1],g:[3,2,0,0,0,1]},
+  Am7:{f:[-1,0,2,0,1,0],g:[0,0,2,0,1,0]},
+  Dm7:{f:[-1,-1,0,2,1,1],g:[0,0,0,2,1,1],barre:{fret:1,from:4,to:5}},
+  Em7:{f:[0,2,2,0,3,0],g:[0,1,2,0,4,0]},
+  // F made easy, then barre chords
+  Fmaj7:{f:[-1,-1,3,2,1,0],g:[0,0,3,2,1,0]},
+  Fmini:{f:[-1,-1,3,2,1,1],g:[0,0,3,2,1,1],barre:{fret:1,from:4,to:5}},
+  F:{f:[1,3,3,2,1,1],g:[1,3,4,2,1,1],barre:{fret:1,from:0,to:5}},
+  "F#m":{f:[2,4,4,2,2,2],g:[1,3,4,1,1,1],barre:{fret:2,from:0,to:5}},
+  Bb:{f:[-1,1,3,3,3,1],g:[0,1,2,3,4,1],barre:{fret:1,from:1,to:5}},
+  Bm:{f:[-1,2,4,4,3,2],g:[0,1,3,4,2,1],barre:{fret:2,from:1,to:5}},
+  B:{f:[-1,2,4,4,4,2],g:[0,1,2,3,4,1],barre:{fret:2,from:1,to:5}},
+  // power chords (root + fifth; strings marked ✕ stay silent)
+  E5:{f:[0,2,2,-1,-1,-1],g:[0,1,3,0,0,0]},
+  A5:{f:[-1,0,2,2,-1,-1],g:[0,0,1,3,0,0]},
+  D5:{f:[-1,-1,0,2,3,-1],g:[0,0,0,1,3,0]},
+  G5:{f:[3,5,5,-1,-1,-1],g:[1,3,4,0,0,0]},
+  C5:{f:[-1,3,5,5,-1,-1],g:[0,1,3,4,0,0]}
+};
+const GROUPS={Basic:["C","G","D","A","E","Am","Em","Dm"],"7ths":["A7","B7","C7","D7","E7","G7","Am7","Dm7","Em7"],Barre:["Fmaj7","Fmini","F","F#m","Bb","Bm","B"],Power:["E5","A5","D5","G5","C5"]};
+const LABEL={Bb:"B♭","F#m":"F♯m",Fmini:"F mini"};
+const STR=["low E","A","D","G","B","high e"],FING=["","Index","Middle","Ring","Pinky"],TIP={1:8,2:12,3:16,4:20};
+const lab=k=>LABEL[k]||k,$=id=>document.getElementById(id);
+const MP="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const MODEL="https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+
+// ---------- maths (pure functions: testable on their own) ----------
+// homography: maps 4 tapped points on the camera image to the neck's own grid
+// (u = 0 at the nut … 1 at the 4th fret, v = 0 on the low E … 1 on the high e)
+export function homography(src,dst){
+  const A=[],b=[];
+  for(let k=0;k<4;k++){const [x,y]=src[k],[u,v]=dst[k];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]);b.push(u);A.push([0,0,0,x,y,1,-v*x,-v*y]);b.push(v)}
+  const n=8;for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[p][i]))p=r;
+    [A[i],A[p]]=[A[p],A[i]];[b[i],b[p]]=[b[p],b[i]];if(Math.abs(A[i][i])<1e-12)return null;
+    for(let r=i+1;r<n;r++){const f=A[r][i]/A[i][i];for(let c=i;c<n;c++)A[r][c]-=f*A[i][c];b[r]-=f*b[i]}}
+  const h=new Array(8);for(let i=n-1;i>=0;i--){let s=b[i];for(let c=i+1;c<n;c++)s-=A[i][c]*h[c];h[i]=s/A[i][i]}
+  return [...h,1];
+}
+export const apply=(H,[x,y])=>{const w=H[6]*x+H[7]*y+H[8];return [(H[0]*x+H[1]*y+H[2])/w,(H[3]*x+H[4]*y+H[5])/w]};
+// real frets get closer together up the neck: position of fret n from the nut, as a share of the nut→4th fret distance
+export const fretPos=n=>(1-Math.pow(2,-n/12))/(1-Math.pow(2,-4/12));
+// a fingertip's neck position → {fret, string}; fret 0 = behind the nut, 5 = past the 4th fret, string -1/6 = off the neck
+export function cell([u,v]){
+  let fret=0;if(u>=0){fret=5;for(let n=1;n<=4;n++)if(u<=fretPos(n)){fret=n;break}}
+  const s=Math.round(v*5);return {fret,string:s<0?-1:s>5?6:s,offNeck:v<-0.15||v>1.15};
+}
+// compare where each needed finger is against the chord shape
+export function check(chordDef,tips){
+  const need={};chordDef.f.forEach((f,i)=>{const g=chordDef.g[i];if(f>0&&g>0)(need[g]=need[g]||[]).push({string:i,fret:f})});
+  return Object.keys(need).map(Number).sort().map(g=>{
+    const want=need[g],t=tips[g];
+    const isBarre=want.length>1;
+    if(!t)return {g,state:"none",text:`${FING[g]}: can't see it`};
+    if(t.offNeck)return {g,state:"none",text:`${FING[g]}: not on the neck`};
+    const hit=want.find(w=>w.fret===t.fret&&(isBarre||w.string===t.string));
+    if(hit)return {g,state:"ok",text:`${FING[g]}: ✓ ${isBarre?`barre at fret ${t.fret}`:`${STR[t.string]} string, fret ${t.fret}`}`};
+    const w=want[0],where=t.fret===0?"behind the nut":t.fret===5?"past fret 4":isBarre?`fret ${t.fret}`:`the ${STR[t.string]} string, fret ${t.fret}`;
+    const fix=isBarre?`move to fret ${w.fret}`:t.fret!==w.fret&&t.string!==w.string?`go to the ${STR[w.string]} string, fret ${w.fret}`:t.fret!==w.fret?`move to fret ${w.fret}`:`move to the ${STR[w.string]} string`;
+    return {g,state:"fix",text:`${FING[g]}: on ${where}. ${fix[0].toUpperCase()+fix.slice(1)}`};
+  });
+}
+
+// ---------- page ----------
+const sel=$("chord");sel.innerHTML=Object.keys(GROUPS).map(g=>`<optgroup label="${g}">${GROUPS[g].map(k=>`<option value="${k}">${lab(k)}</option>`).join("")}</optgroup>`).join("");
+try{sel.value=localStorage.getItem("fretcoach-lab-chord")||"C"}catch(e){}
+sel.onchange=()=>{try{localStorage.setItem("fretcoach-lab-chord",sel.value)}catch(e){}};
+let corners=null;try{corners=JSON.parse(localStorage.getItem("fretcoach-lab-neck")||"null")}catch(e){}
+let H=corners?homography(corners,[[0,0],[0,1],[1,0],[1,1]]):null;
+let stream=null,facing="user",landmarker=null,running=false,calStep=-1,taps=[];
+const video=$("video"),cv=$("overlay"),ctx=cv.getContext("2d");
+function say(text,phase,kind=""){$("say").textContent=text;$("phase").textContent=phase;$("status").className="status "+kind}
+const CAL=["Tap where the LOW E string (the thickest) meets the nut.","Tap where the HIGH e string (the thinnest) meets the nut.","Tap the LOW E string at the 4th fret.","Tap the HIGH e string at the 4th fret."];
+
+async function loadModel(){
+  say("Loading the hand tracker (about 8 MB, first time only)…","Loading");
+  const {HandLandmarker,FilesetResolver}=await import(MP+"/vision_bundle.mjs");
+  const files=await FilesetResolver.forVisionTasks(MP+"/wasm");
+  const opts=d=>({baseOptions:{modelAssetPath:MODEL,delegate:d},runningMode:"VIDEO",numHands:1,minHandDetectionConfidence:.15,minHandPresenceConfidence:.15,minTrackingConfidence:.3});
+  try{return await HandLandmarker.createFromOptions(files,opts("GPU"))}catch(e){return await HandLandmarker.createFromOptions(files,opts("CPU"))}
+}
+async function startCam(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}},audio:false});
+  video.srcObject=stream;await video.play();
+  $("view").classList.toggle("mirror",facing==="user");$("empty").hidden=true;
+}
+$("startBtn").onclick=async()=>{
+  $("startBtn").disabled=true;
+  try{await startCam()}catch(e){say("The camera didn't open. Allow camera access for this page in your browser settings, then try again.","Camera blocked","fix");$("startBtn").disabled=false;return}
+  try{landmarker=landmarker||await loadModel()}catch(e){say("The hand tracker didn't load. Check your connection and reload the page.","Load failed","fix");console.error(e);$("startBtn").disabled=false;return}
+  $("calBtn").disabled=false;$("flipBtn").disabled=false;$("startBtn").textContent="Camera on";
+  say(H?"Hold the chord. Your fingers show up below.":"Tap Mark the neck, then tap the 4 points it asks for.",H?"Watching":"Mark the neck");
+  running=true;requestAnimationFrame(loop);
+};
+$("flipBtn").onclick=async()=>{facing=facing==="user"?"environment":"user";try{await startCam()}catch(e){};say("Camera switched. Mark the neck again, since the picture moved.","Mark the neck");H=null};
+$("calBtn").onclick=()=>{calStep=0;taps=[];say(CAL[0],"Mark the neck · 1 of 4")};
+// taps on the picture → camera-pixel coordinates (undoing the mirror and the crop to fill the box)
+$("view").addEventListener("click",ev=>{
+  if(calStep<0||!video.videoWidth)return;
+  const r=$("view").getBoundingClientRect(),vw=video.videoWidth,vh=video.videoHeight,sc=Math.max(r.width/vw,r.height/vh);
+  let x=(ev.clientX-r.left-(r.width-vw*sc)/2)/sc,y=(ev.clientY-r.top-(r.height-vh*sc)/2)/sc;
+  if($("view").classList.contains("mirror"))x=vw-x;
+  taps.push([x/vw,y/vh]);calStep++;
+  if(calStep<4){say(CAL[calStep],`Mark the neck · ${calStep+1} of 4`);return}
+  calStep=-1;corners=taps;H=homography(corners,[[0,0],[0,1],[1,0],[1,1]]);
+  try{localStorage.setItem("fretcoach-lab-neck",JSON.stringify(corners))}catch(e){}
+  say(H?"Neck marked. Hold the chord.":"Those points didn't make a usable shape. Tap Mark the neck and try again.",H?"Watching":"Try again",H?"good":"fix");
+});
+
+// ---------- turning the picture ----------
+// The tracker finds hands best when they're roughly upright. A fretting hand is often sideways, so when no hand has
+// been seen for half a second, it tries the picture turned 90°, 180° and 270° (tested on 13 chord photos: 7 found
+// upright, 9 with turning). Landmarks are turned back so everything else works in the camera's own coordinates.
+const rcv=document.createElement("canvas"),rctx=rcv.getContext("2d");let rotDeg=0,missStreak=0;
+function framed(deg){
+  if(!deg)return video;
+  const w=video.videoWidth,h=video.videoHeight,sw=deg%180?h:w,sh=deg%180?w:h;
+  if(rcv.width!==sw||rcv.height!==sh){rcv.width=sw;rcv.height=sh}
+  rctx.setTransform(1,0,0,1,0,0);rctx.translate(sw/2,sh/2);rctx.rotate(deg*Math.PI/180);rctx.drawImage(video,-w/2,-h/2,w,h);
+  return rcv;
+}
+export function unrotate(p,deg,w,h){   // normalized point in the turned picture → normalized point in the camera picture
+  if(!deg)return p;const sw=deg%180?h:w,sh=deg%180?w:h,a=-deg*Math.PI/180;
+  const qx=p.x*sw-sw/2,qy=p.y*sh-sh/2;return {x:(qx*Math.cos(a)-qy*Math.sin(a)+w/2)/w,y:(qx*Math.sin(a)+qy*Math.cos(a)+h/2)/h};
+}
+
+// ---------- live loop ----------
+let frames=0,seenFrames=0,lastStat=performance.now(),hist=[];
+function loop(){
+  if(!running)return;
+  if(video.readyState>=2&&landmarker){
+    const now=performance.now(),res=landmarker.detectForVideo(framed(rotDeg),now);frames++;
+    let hand=res.landmarks&&res.landmarks[0];
+    if(hand){seenFrames++;missStreak=0;if(rotDeg)hand=hand.map(p=>unrotate(p,rotDeg,video.videoWidth,video.videoHeight))}
+    else if(++missStreak>15){rotDeg=(rotDeg+90)%360;missStreak=0}
+    draw(hand);
+    if(H&&hand){
+      // fingertip cells, smoothed over the last 8 frames so one jittery frame doesn't flip the answer
+      const tips={};for(const g of [1,2,3,4]){const p=hand[TIP[g]];tips[g]=cell(apply(H,[p.x,p.y]))}
+      hist.push(tips);if(hist.length>8)hist.shift();
+      const sm={};for(const g of [1,2,3,4]){const vals=hist.map(h=>h[g]).filter(Boolean),key=c=>c.fret+":"+c.string+":"+c.offNeck,cnt={};
+        for(const c of vals)cnt[key(c)]=(cnt[key(c)]||0)+1;const best=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+        sm[g]=best?vals.find(c=>key(c)===best[0]):null;sm[g+"n"]=best?best[1]/vals.length:0}
+      const out=check(CHORDS[sel.value],sm);
+      $("fingers").innerHTML=out.map(o=>`<li class="${o.state}"><span>${o.text}</span></li>`).join("")||`<li class="none"><span>${lab(sel.value)} needs no fretting fingers.</span></li>`;
+      const allOk=out.length&&out.every(o=>o.state==="ok");
+      if(calStep<0)say(allOk?`${lab(sel.value)} looks right. Strum it!`:"Fix the fingers marked in red.",allOk?"Shape OK":"Watching",allOk?"good":"");
+      $("steady").textContent=Math.round(100*Math.min(...[1,2,3,4].map(g=>sm[g+"n"]||0)))+"%";
+    }else if(H&&!hand&&calStep<0){say("Can't see your hand. More light, or move the phone so the whole hand is in view.","Looking","");hist=[]}
+    if(now-lastStat>1000){$("fps").textContent=Math.round(frames*1000/(now-lastStat));$("seen").textContent=frames?Math.round(100*seenFrames/frames)+"%":"–";
+      $("small").textContent=`tracker: ${landmarker?"on":"off"} · camera ${video.videoWidth}×${video.videoHeight} · picture turned ${rotDeg}°`;frames=0;seenFrames=0;lastStat=now}
+  }
+  requestAnimationFrame(loop);
+}
+function draw(hand){
+  const w=cv.width=video.videoWidth,h=cv.height=video.videoHeight;ctx.clearRect(0,0,w,h);
+  // fret grid (from the 4 marked points): strings and frets 0–4
+  if(H){const inv=homography([[0,0],[0,1],[1,0],[1,1]],corners),P=(u,v)=>{const [x,y]=apply(inv,[u,v]);return [x*w,y*h]};
+    ctx.lineWidth=2;ctx.strokeStyle="rgba(43,255,90,.8)";
+    for(let s=0;s<6;s++){ctx.beginPath();ctx.moveTo(...P(0,s/5));ctx.lineTo(...P(1,s/5));ctx.stroke()}
+    for(let n=0;n<=4;n++){const u=n?fretPos(n):0;ctx.beginPath();ctx.moveTo(...P(u,-.08));ctx.lineTo(...P(u,1.08));ctx.stroke()}
+    // where the chord wants each finger: hollow yellow squares
+    const c=CHORDS[sel.value];ctx.strokeStyle="#ffe14a";ctx.lineWidth=3;
+    c.f.forEach((f,i)=>{if(f>0&&f<=4){const u=(fretPos(f)+fretPos(f-1))/2,[x,y]=P(u,i/5);ctx.strokeRect(x-9,y-9,18,18)}});
+  }
+  if(calStep>=0||!H){ctx.fillStyle="#ffe14a";for(const [x,y] of taps.slice(0,calStep<0?0:calStep))ctx.fillRect(x*w-6,y*h-6,12,12)}
+  // fingertips: index blue, middle green, ring red, pinky yellow
+  if(hand){const col={1:"#1f5bff",2:"#3dff6e",3:"#ff3b3b",4:"#ffe14a"};
+    for(const g of [1,2,3,4]){const p=hand[TIP[g]];ctx.fillStyle=col[g];ctx.strokeStyle="#000";ctx.lineWidth=2;ctx.fillRect(p.x*w-7,p.y*h-7,14,14);ctx.strokeRect(p.x*w-7,p.y*h-7,14,14)}}
+}
+</script>
+</body>
+</html>
