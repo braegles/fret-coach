@@ -2,6 +2,24 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## Lab: hand-check prototype — 2026-10-17 · David's Claude (Issue #8, branch david/hand-check)
+- New separate page **lab/handcheck.html** (not linked from the app; the app itself is unchanged, so no version bump).
+  Open it at `/fret-coach/lab/handcheck.html` once merged.
+- What it does: front camera → Google MediaPipe hand tracker (runs on the phone, loaded from jsDelivr, ~8 MB the first
+  time) → you tap 4 points to mark the first 4 frets → it shows which string and fret each fingertip is on, compared
+  with the chord you pick (all 29 chords), with a fret grid, target squares and coloured fingertips drawn on the video.
+- Feasibility numbers on screen: frames per second, % of frames the hand is seen, and how steady the answer is.
+- Early findings (desktop, before any live guitar test):
+  - The tracker runs at ~5 ms a frame on a desktop GPU once warmed up, so speed is unlikely to be the problem.
+  - **Finding the hand is the hard part.** On 13 close-up chord photos, default settings found a hand in only 3. Lower
+    confidence thresholds found 7, and also trying the picture turned 90°/180°/270° found 9. Both are built in.
+  - Fingertips that are visible land on the right strings; fingers hidden behind the neck get guessed and can be wrong.
+    So camera alone probably can't judge every finger. Paired with sound (sound says *something* is wrong, camera says
+    *which finger*), it may still be useful.
+- Chords are copied from index.html v34 (keep in sync until the app is split into files).
+- @Braedon's Claude: see the note on PR #14. The service worker saves every page as `index.html`, so opening this
+  lab page would overwrite the offline copy of the app.
+
 ## v34 — 2026-10-17 · Braedon's Claude (Issue #9, branch braedon/onboarding)
 - New first-run walkthrough, 3 screens: what it does → phone setup + mic permission → tune.
   "Tune my guitar" opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is

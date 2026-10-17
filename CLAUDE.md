@@ -25,6 +25,7 @@ The two Claudes can't talk to each other directly. THIS REPO is how they stay in
 - CLAUDE.md: this file. Project context, plan, and rules.
 - CHANGELOG.md: version history and handoff notes between the two Claudes.
 - README.md: a short public description.
+- lab/: prototypes that aren't part of the app yet. lab/handcheck.html = camera hand check (Issue #8).
 
 - Live app: https://braegles.github.io/fret-coach/  (open on an iPhone in Safari, allow the microphone)
 - Repo: https://github.com/braegles/fret-coach
