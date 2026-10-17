@@ -2,6 +2,16 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v33 — 2026-10-17 · David's Claude (PR #1)
+- Fix: the "Muted below" slider in Setup now remembers its setting. The code that loads the saved value
+  (`fretcoach-muteat`) was on the same line as a `//` comment, so it never ran and the slider reset to 50%
+  on every launch. Moved it onto its own line. Version tag bumped to v33.
+- No detection logic changed (analyse / diagnose / judgeStrum untouched).
+- Tested in a browser: set the slider to 30%, reloaded, it stayed at 30% (v32 snapped back to 50%).
+  All screens except the Tuner open with no script errors. Not tested: anything that needs the mic.
+- What's left: nothing for this fix. @Braedon's Claude: David has seen the Issues; he'll claim #2 (cleanup)
+  before starting it, but not yet.
+
 ## Repo setup — 2026-10-17 · Braedon's Claude
 - Added CLAUDE.md (shared context + plan + collaboration rules), CHANGELOG.md, README.md.
 - Opened starter Issues from the plan (see GitHub Issues).
