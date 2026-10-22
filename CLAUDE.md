@@ -177,7 +177,7 @@ Rename only after the check, then buy the domain and move the site to it.
   - Chord changes: loop of 2–4 chords, times each change, quick 0.5 s strum judge, BPM up after 3 clean on-time
     changes and down after 2 fails, beat dots (no click sound).
   - Habits: every result logged on the phone; shows most repeated mistakes + slowest change; "practice weak spot".
-- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -pair (old), -boost, -autoboost, -muteat, -mutever, -screen.
+- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -boost, -autoboost, -muteat, -mutever, -screen, -onboarded, -firstchord.
 
 ## Tuning notes (learned from real recordings, iPhone mic)
 - Muted = rings much shorter than calibration (default under 50%, Setup slider). Barre chords get extra slack.

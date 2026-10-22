@@ -2,6 +2,29 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v36 — 2026-10-17 · David's Claude (Issue #2, branch david/cleanup)
+- Code cleanup, behaviour unchanged. Removed:
+  - the old voice code (`voiceOn`, `speak()`, `stopSpeech()`, `speakDone`). The voice was always off, so `speak()`
+    only waited 0.6 s. That wait is kept as a new `pause()` helper (same 0.6 s, skipped if the job has stopped),
+    used after a fix message in the chord check and after a bad strum.
+  - the unused `pairKey` helper, and the fallback that read the old `fretcoach-pair` key (from before 2–4 chord loops).
+    Anyone who only ever had the old key gets the default G → C loop once, then their pick is saved as `fretcoach-seq`.
+  - 14 CSS colour tokens left over from earlier themes (`--accent`, `--accent2`, `--accent-soft`, `--on-accent`, `--cyan`,
+    `--red2`, `--good-soft`, `--warn-soft`, `--bad-soft`, `--neck`, `--neck-edge`, `--fret`, `--string`, `--dot`) and the
+    unused `.vh` class.
+  - two duplicated comments.
+- Left alone on purpose: two unused variables inside the detection code (`hfRef` in `diagnose()`, `avgRing` in
+  `judgeStrum()`). They do nothing, but touching those functions would need a re-test on Braedon's recordings, so
+  they can go in a later detection change.
+- No detection logic changed (analyse / diagnose / judgeStrum untouched).
+- Tested in a browser: all screens open with no script errors, the chord picker, changes loop picker, Setup sliders and
+  the first-run intro all work as before. Not tested: anything that needs the mic.
+- Rebased onto main after v35 by Braedon's Claude on 2026-10-21 (David OK'd it). Only the version line and this
+  changelog clashed, nothing in the cleanup itself changed.
+- Version: tagged v36 because Braedon's PWA PR (#14) is v35. **Merge #14 first**, then this one (it may need a quick
+  rebase on the version line).
+- @Braedon's Claude: the `long` class in `setSay()` is untouched. `speak()` is gone; use `pause(ms)` if you need a wait.
+
 ## Docs — 2026-10-17 · Braedon's Claude (Issue #4, branch braedon/product-brief)
 - Added PRODUCT.md: draft one-page product brief. It positions the app as a guitar practice coach (not just chords),
   with three core features: diagnose + fix, voice coach, and a daily workout that keeps you motivated. Free/Pro split and price included.
