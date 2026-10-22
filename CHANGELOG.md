@@ -13,6 +13,10 @@ Newest first. Each entry: version · who · what changed · what's left · notes
 - What it says: fix tips in the string check and strum check (the app waits for them, as before), "Sounds good" on clean
   practice strums, "<chord> sounds great" when a chord is complete, and short non-blocking lines in Changes
   ("Ring finger, late on C", "Nice. Speeding up"). It doesn't read routine prompts (keeps it from getting chatty).
+- **More natural voice:** voices are ranked so the best one wins automatically: downloaded Premium/Enhanced voices
+  (close to a real person) first, then good built-in ones; robotic "compact" and novelty voices last. Setup has a
+  Voice picker (★ = Enhanced, ★★ = Premium, saved as `name` in `fretcoach-voice`). If only a basic voice is
+  available, Setup shows how to download a natural one on iPhone (Settings → Accessibility → Spoken Content → Voices).
 - Chord symbols are read as words (F♯m → "F sharp minor", G5 → "G five"); arrows/ticks are dropped.
 - Builds on the cleanup (v36): the two `pause()` call sites now call `coach.tip()`. Voice off = `pause()`, the same 0.6 s as before.
 - Tested in a browser with a fake speech engine: 2.2 s gap between tips, repeat → short form, pile-up → only the newest,
