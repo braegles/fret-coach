@@ -43,7 +43,7 @@ and we'd lose on content.
 3. **A practice plan that keeps you going:** a daily 5-minute workout built from your own mistakes and slowest
    chord changes, with streaks, visible progress and encouragement when you improve. This is the motivation feature. *Habits data built; workout next (Issue #7).*
 
-Supporting: tuner, chord-change trainer, 29 chords, installable offline app (all built).
+Supporting: tuner, chord-change trainer, the 8 basic chords (7ths, barre and power are hidden until the basics are polished), installable offline app (all built).
 Headline experiment: **camera + sound hand check** (Issue #8, lab prototype).
 
 ## Why we win
@@ -55,7 +55,7 @@ Headline experiment: **camera + sound hand check** (Issue #8, lab prototype).
 | Tier | What's in it | Price |
 |---|---|---|
 | Free | Tuner, 8 basic chords with full checks, strum check, **voice coach** | $0 |
-| Pro | All chords (7ths, barre, power), chord-change loops, daily workout, progress history, future song mode | **$4.99/month** or **$29.99 "founder lifetime"** |
+| Pro | More chords (7ths, barre, power come back once the 8 basics are polished), chord-change loops, daily workout, progress history, future song mode | **$4.99/month** or **$29.99 "founder lifetime"** |
 
 Decided: the voice coach is **free**, so everyone gets the "coach" feeling in their very first session.
 

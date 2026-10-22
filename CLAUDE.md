@@ -162,7 +162,8 @@ Rename only after the check, then buy the domain and move the site to it.
 - Screens via the top menu: Chords, Changes, Tuner, Habits, Setup (body[data-screen] CSS rules show/hide panels).
 - JS sections, in order:
   - CHORDS library (29 chords): f = fret per string low E→high e (-1 don't play, 0 open), g = finger 1–4,
-    optional barre {fret,from,to}. GROUPS = Basic / 7ths / Barre / Power. lab() = display names (B♭, F♯m).
+    optional barre {fret,from,to}. ALL_GROUPS = Basic / 7ths / Barre / Power; HIDDEN_GROUPS (7ths, Barre,
+    Power hidden since v37: only the 8 basic chords show) are left out of GROUPS, which is what the UI shows. lab() = display names (B♭, F♯m).
   - drawBoard(): SVG chord diagram (fret window shifts up for high shapes; barre drawn as one bar).
   - Analysis (pure functions, testable offline in Node):
     - analyse(): one plucked string → note (FFT over the string's possible range, minus the pre-pluck spectrum),
