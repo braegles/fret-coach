@@ -219,7 +219,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v36</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v37</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -340,7 +340,12 @@ const CHORDS={
   G5:{f:[3,5,5,-1,-1,-1],g:[1,3,4,0,0,0]},
   C5:{f:[-1,3,5,5,-1,-1],g:[0,1,3,4,0,0]}
 };
-const GROUPS={Basic:["C","G","D","A","E","Am","Em","Dm"],"7ths":["A7","B7","C7","D7","E7","G7","Am7","Dm7","Em7"],Barre:["Fmaj7","Fmini","F","F#m","Bb","Bm","B"],Power:["E5","A5","D5","G5","C5"]};
+const ALL_GROUPS={Basic:["C","G","D","A","E","Am","Em","Dm"],"7ths":["A7","B7","C7","D7","E7","G7","Am7","Dm7","Em7"],Barre:["Fmaj7","Fmini","F","F#m","Bb","Bm","B"],Power:["E5","A5","D5","G5","C5"]};
+// Hidden for now (Braedon, 2026-10-21): polish the basics first. The chord data and barre tips stay in the code,
+// so bringing a group back = removing it from this list.
+const HIDDEN_GROUPS=["7ths","Barre"];
+const GROUPS=Object.fromEntries(Object.entries(ALL_GROUPS).filter(([g])=>!HIDDEN_GROUPS.includes(g)));
+const shown=k=>Object.values(GROUPS).some(l=>l.includes(k));
 const LABEL={Bb:"B♭","F#m":"F♯m",Fmini:"F mini"};
 const lab=k=>LABEL[k]||k;
 const groupOf=k=>Object.keys(GROUPS).find(g=>GROUPS[g].includes(k))||"Basic";
@@ -369,6 +374,7 @@ const playable=()=>CHORDS[chord].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
 // chord picker: a row of group tabs (Basic / 7ths / Barre / Power) over a grid of chord keys for that group
 let curGroup=groupOf(chord);
 function buildPicker(){
+  $("cgroups").style.gridTemplateColumns=`repeat(${Object.keys(GROUPS).length},1fr)`;
   $("cgroups").innerHTML=Object.keys(GROUPS).map(g=>`<button type="button" data-g="${g}" aria-pressed="${g===curGroup}">${g}</button>`).join("");
   $("cgroups").querySelectorAll("button").forEach(b=>b.onclick=()=>{curGroup=b.dataset.g;buildPicker()});
   $("chords").innerHTML="";
@@ -996,11 +1002,12 @@ function computeHabits(){
     if(e.type==="strum"){for(const i of playableOf(e.chord)){const k=e.chord+"|"+i+"|S";tries[k]=(tries[k]||0)+1}for(const i of e.missing||[]){const pk=e.chord+"|"+i+"|strum";probs[pk]=(probs[pk]||0)+1}}
   }
   const list=Object.entries(probs).map(([pk,n])=>{const [ch,i,kind]=pk.split("|");const t=tries[ch+"|"+i+(kind==="strum"?"|S":"")]||n;return {ch,i:+i,kind,n,t,rate:n/t}})
-    .filter(h=>h.n>=2).sort((a,b)=>b.rate*Math.min(1,b.t/5)-a.rate*Math.min(1,a.t/5)).slice(0,3);
+    .filter(h=>h.n>=2&&shown(h.ch)).sort((a,b)=>b.rate*Math.min(1,b.t/5)-a.rate*Math.min(1,a.t/5)).slice(0,3);
   // chord changes: average clean changeover time per pair
   const pairs={};for(const e of ev)if(e.type==="change"&&e.ok){const k=e.from+"→"+e.to;(pairs[k]=pairs[k]||[]).push(e.secs)}
   const slow=Object.entries(pairs).filter(([,v])=>v.length>=3).map(([k,v])=>({pair:k,avg:median(v.slice(-10)),n:v.length})).sort((a,b)=>b.avg-a.avg);
-  return {list,slow,total:ev.length};
+  // only chords that are on screen (hidden groups stay out of Habits and "Practice my weak spot")
+  return {list,slow:slow.filter(x=>x.pair.split("→").every(shown)),total:ev.length};
 }
 const playableOf=ch=>CHORDS[ch].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
 function drawHabits(){
@@ -1097,7 +1104,7 @@ const SLOTS=["cs0","cs1","cs2","cs3"],seqKey=q=>q.join("→");
 function fillPairs(){
   const opts=(sel,opt)=>(opt?`<option value=""${sel?"":" selected"}>—</option>`:"")+Object.keys(GROUPS).map(g=>`<optgroup label="${g}">${GROUPS[g].map(k=>`<option value="${k}"${k===sel?" selected":""}>${lab(k)}</option>`).join("")}</optgroup>`).join("");
   let q=["G","C"];
-  try{const a=JSON.parse(localStorage.getItem("fretcoach-seq")||"null");if(Array.isArray(a)&&a.length>=2&&a.length<=4&&a.every(k=>CHORDS[k]))q=a}catch(e){}
+  try{const a=JSON.parse(localStorage.getItem("fretcoach-seq")||localStorage.getItem("fretcoach-pair")||"null");if(Array.isArray(a)&&a.length>=2&&a.length<=4&&a.every(k=>CHORDS[k]&&shown(k)))q=a}catch(e){}
   SLOTS.forEach((id,j)=>$(id).innerHTML=opts(q[j]||"",j>=2));showPairStats();
 }
 function readSeq(){
