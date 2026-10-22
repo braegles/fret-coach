@@ -2,7 +2,7 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
-## v38 — 2026-10-21 · Braedon's Claude (branch braedon/hide-chords)
+## v37 — 2026-10-21 · Braedon's Claude (branch braedon/hide-chords)
 - **Only the original 8 basic chords are shown for now** (Braedon: polish the basics first). 7ths, barre and power
   chords are hidden on the Chords screen and in the Changes loop picker. The group tabs are hidden too, since there's only one group.
 - Hidden, not deleted: `ALL_GROUPS` still has all 29 chords, and the barre tips and detection slack stay in the code.

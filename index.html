@@ -1105,7 +1105,7 @@ const SLOTS=["cs0","cs1","cs2","cs3"],seqKey=q=>q.join("→");
 function fillPairs(){
   const opts=(sel,opt)=>(opt?`<option value=""${sel?"":" selected"}>—</option>`:"")+Object.keys(GROUPS).map(g=>`<optgroup label="${g}">${GROUPS[g].map(k=>`<option value="${k}"${k===sel?" selected":""}>${lab(k)}</option>`).join("")}</optgroup>`).join("");
   let q=["G","C"];
-  try{const a=JSON.parse(localStorage.getItem("fretcoach-seq")||localStorage.getItem("fretcoach-pair")||"null");if(Array.isArray(a)&&a.length>=2&&a.length<=4&&a.every(k=>CHORDS[k]&&shown(k)))q=a}catch(e){}
+  try{const a=JSON.parse(localStorage.getItem("fretcoach-seq")||"null");if(Array.isArray(a)&&a.length>=2&&a.length<=4&&a.every(k=>CHORDS[k]&&shown(k)))q=a}catch(e){}
   SLOTS.forEach((id,j)=>$(id).innerHTML=opts(q[j]||"",j>=2));showPairStats();
 }
 function readSeq(){
