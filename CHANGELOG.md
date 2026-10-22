@@ -3,12 +3,12 @@
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
 ## v38 — 2026-10-21 · Braedon's Claude (branch braedon/hide-chords)
-- **7th and barre chords are hidden for now** (Braedon: polish the basics first). The Chords screen shows Basic + Power,
-  and the Changes loop picker only offers those 13 chords.
+- **Only the original 8 basic chords are shown for now** (Braedon: polish the basics first). 7ths, barre and power
+  chords are hidden on the Chords screen and in the Changes loop picker. The group tabs are hidden too, since there's only one group.
 - Hidden, not deleted: `ALL_GROUPS` still has all 29 chords, and the barre tips and detection slack stay in the code.
-  `HIDDEN_GROUPS = ["7ths","Barre"]` controls it, so bringing a group back means taking it off that list.
+  `HIDDEN_GROUPS = ["7ths","Barre","Power"]` controls it, so bringing a group back means taking it off that list.
 - A saved Changes loop that used a hidden chord falls back to G → C. Habits and "Practice my weak spot" skip hidden chords.
-- Group tabs now stretch to fill the row (2 tabs instead of 4).
+- Group tabs stretch to fill the row, and disappear when only one group is shown.
 - No detection logic changed. Tested in a browser: tabs, Changes options, saved-loop fallback, habits filtering,
   intro flow. No script errors.
 

@@ -341,9 +341,9 @@ const CHORDS={
   C5:{f:[-1,3,5,5,-1,-1],g:[0,1,3,4,0,0]}
 };
 const ALL_GROUPS={Basic:["C","G","D","A","E","Am","Em","Dm"],"7ths":["A7","B7","C7","D7","E7","G7","Am7","Dm7","Em7"],Barre:["Fmaj7","Fmini","F","F#m","Bb","Bm","B"],Power:["E5","A5","D5","G5","C5"]};
-// Hidden for now (Braedon, 2026-10-21): polish the basics first. The chord data and barre tips stay in the code,
+// Hidden for now (Braedon, 2026-10-21): only the 8 basic chords until they are polished. The chord data and barre tips stay in the code,
 // so bringing a group back = removing it from this list.
-const HIDDEN_GROUPS=["7ths","Barre"];
+const HIDDEN_GROUPS=["7ths","Barre","Power"];
 const GROUPS=Object.fromEntries(Object.entries(ALL_GROUPS).filter(([g])=>!HIDDEN_GROUPS.includes(g)));
 const shown=k=>Object.values(GROUPS).some(l=>l.includes(k));
 const LABEL={Bb:"B♭","F#m":"F♯m",Fmini:"F mini"};
@@ -374,7 +374,8 @@ const playable=()=>CHORDS[chord].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
 // chord picker: a row of group tabs (Basic / 7ths / Barre / Power) over a grid of chord keys for that group
 let curGroup=groupOf(chord);
 function buildPicker(){
-  $("cgroups").style.gridTemplateColumns=`repeat(${Object.keys(GROUPS).length},1fr)`;
+  const ng=Object.keys(GROUPS).length;$("cgroups").style.gridTemplateColumns=`repeat(${ng},1fr)`;
+  $("cgroups").style.display=ng>1?"":"none";   // one group = no tabs needed
   $("cgroups").innerHTML=Object.keys(GROUPS).map(g=>`<button type="button" data-g="${g}" aria-pressed="${g===curGroup}">${g}</button>`).join("");
   $("cgroups").querySelectorAll("button").forEach(b=>b.onclick=()=>{curGroup=b.dataset.g;buildPicker()});
   $("chords").innerHTML="";
