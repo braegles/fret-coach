@@ -149,7 +149,7 @@ body:not([data-screen="tuner"]) .tuner{display:none}
 .ob-steps i.on{background:var(--wire);border-color:#000}
 .ob-kicker{font:12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--yellow)}
 .onboard h2{margin:0;font-family:var(--f-disp);font-weight:400;font-size:30px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:#fff;text-shadow:2px 2px 0 #000}
-#obBody{display:grid;gap:12px}
+#obBody,#saBody{display:grid;gap:12px}
 .onboard p{margin:0;font-size:15.5px;line-height:1.5}
 .onboard ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:15px}
 .onboard .controls{grid-template-columns:1fr 1fr}
@@ -219,7 +219,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v37</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v38</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -290,6 +290,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
   </section>
 </div>
 
+<div class="onboard" id="setupAsk" hidden role="dialog" aria-modal="true" aria-labelledby="saTitle">
+  <section class="card">
+    <span class="ob-kicker">Before you start</span>
+    <h2 id="saTitle">Quick setup first</h2>
+    <div id="saBody">
+      <p>Before it can check chords, the app listens to each open string once. That does two things: it <b>tunes your guitar</b>, and it <b>learns how your strings sound</b> in your room, so it can tell when a note is muted or buzzing.</p>
+      <p><b>Already in tune?</b> It's still quick: pluck each string once and the needle goes green. About 30 seconds, and only once on this phone.</p>
+    </div>
+    <div class="controls"><button class="btn" id="saSkip" type="button">Skip for now</button><button class="btn primary" id="saGo" type="button" style="grid-column:auto">Start setup</button></div>
+    <p class="note" style="margin:0">Skipping uses standard settings, so the muted and buzz checks are a bit less accurate. You can run the Tuner any time.</p>
+  </section>
+</div>
 <div class="onboard" id="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="obTitle">
   <section class="card">
     <div class="ob-steps" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -890,6 +902,28 @@ function saveTuning(){
   cal={v:4,s,at:Date.now()};try{localStorage.setItem("fretcoach-cal",JSON.stringify(cal))}catch(e){}
   return true;
 }
+// "Skip for now": standard settings measured from a real guitar on an iPhone. raw = 0 switches off the loudness
+// gate (we don't know this phone's mic level yet), so every clear pluck is heard.
+const EST_BASE=[{ring:0.86,hf:1.4e-3,flat:0.0047},{ring:0.56,hf:6.8e-4,flat:0.0133},{ring:1.04,hf:4.0e-3,flat:0.0173},
+  {ring:0.84,hf:1.22e-2,flat:0.0020},{ring:0.71,hf:1.32e-2,flat:0.0027},{ring:0.66,hf:1.5e-2,flat:0.0021}];
+function useEstimatedCal(){
+  cal={v:4,est:true,at:Date.now(),s:EST_BASE.map(x=>({cents:0,raw:0,...x}))};
+  try{localStorage.setItem("fretcoach-cal",JSON.stringify(cal))}catch(e){}
+}
+// No calibration yet: explain the quick setup instead of jumping to the tuner. Both buttons call `go` straight from
+// the tap, which is what lets Safari open the mic.
+function askSetup(go){
+  $("setupAsk").hidden=false;$("saGo").focus();
+  $("saGo").onclick=()=>{$("setupAsk").hidden=true;go()};   // go() runs the tuner first, because there's still no calibration
+  $("saSkip").onclick=()=>{$("setupAsk").hidden=true;useEstimatedCal();go()};
+}
+const estNote=()=>cal?.est?"Using standard settings. Run the Tuner once for more accurate checks.":"";
+// the tuner was closed before any string was saved: stop cleanly instead of sitting on "Starting…"
+function setupNotDone(){
+  stopListening();
+  setSay("Setup wasn't finished.","Setup","warn");
+  setPrompt("Pick a chord to try again, or choose Skip for now to use standard settings.");
+}
 function endTuner(){
   tuning=false;tuneCents=null;if(screen==="tuner")setScreen(prevScreen==="tuner"?"chords":prevScreen);setControls();drawAll();
   return false;
@@ -898,17 +932,18 @@ function endTuner(){
 // ---------- chord check ----------
 async function checkChord(ok=alive){
   if(!cal){
-    const saved=await tuneGuitar(ok);if(!saved||!ok())return;
+    const saved=await tuneGuitar(ok);if(!ok())return;if(!saved)return setupNotDone();
   }
   results=[];strumRes=null;current=playable()[0];drawAll();
-  setSay(`Hold ${lab(chord)}, then pluck the ${STR[current].full}.`,`${lab(chord)} · string ${6-current}`);setPrompt("");
+  setSay(`Hold ${lab(chord)}, then pluck the ${STR[current].full}.`,`${lab(chord)} · string ${6-current}`);
+  setPrompt(estNote());
   const thr=await noiseFloor();if(!ok())return;
   let from=after(0.6);
   for(const i of playable()){
     let tries=0,missed=0,mutedOnce=false;
     while(ok()){
       current=i;drawBoard();
-      if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt("")}
+      if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt(estNote())}
       const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12,()=>0.3*pluckLvl(i));if(a===null)return;
       if(a==="skip"){results[i]=null;from=A.total;break}
       // no clear note and quieter than half a normal pluck: hand noise while setting up, so just keep listening
@@ -1049,7 +1084,7 @@ function quickJudge(seg,pre,target){
 // a loop of 2–4 chords: strum the first to start the clock, then each clean strum of the next chord is one timed change.
 // After the last chord it loops back to the first. Each change is logged, so Habits can show your slowest one.
 async function changeDrill(seq,ok=alive){
-  if(!cal){const saved=await tuneGuitar(ok);if(!saved||!ok())return}
+  if(!cal){const saved=await tuneGuitar(ok);if(!ok())return;if(!saved)return setupNotDone()}
   drillOn=true;setControls();
   const n=seq.length,nm=seq.map(lab),key=seqKey(seq);let bpm=changeBpm[key]||60,streak=0,fails=0,times=[];const per={};
   const showStats=last=>{
@@ -1126,8 +1161,9 @@ async function startChanges(seq){
   SLOTS.forEach((id,j)=>$(id).value=seq[j]||"");showPairStats();
   if(screen!=="changes")setScreen("changes");
   practice=false;
-  if(!running&&!await start())return;
-  runJob(()=>changeDrill(seq));
+  const go=async()=>{if(!running&&!await start())return;runJob(()=>changeDrill(seq))};
+  if(!cal){askSetup(go);return}
+  go();
 }
 
 // ---------- controls ----------
@@ -1164,12 +1200,15 @@ async function pickChord(k){
   if(groupOf(k)!==curGroup){curGroup=groupOf(k);buildPicker()}
   chord=k;results=[];strumRes=null;current=-1;practice=false;setControls();drawAll();
   setSay(`${lab(k)}: getting ready…`,"Starting");setPrompt("");
-  if(!running&&!await start())return;
-  runJob(()=>checkChord());
+  const go=async()=>{if(!running&&!await start())return;runJob(()=>checkChord())};
+  if(!cal){if(running)pauseAll();setSay(`${lab(k)}: quick setup first.`,"Setup");askSetup(go);return}
+  go();
 }
 $("start").onclick=async()=>{
   if(running)return pauseAll();
-  if(await start()){practice=false;setControls();runJob(()=>checkChord())}
+  const go=async()=>{if(await start()){practice=false;setControls();runJob(()=>checkChord())}};
+  if(!cal){askSetup(go);return}
+  go();
 };
 $("skip").onclick=()=>{skipFlag=true};
 $("strumBtn").onclick=()=>{
@@ -1196,7 +1235,7 @@ async function goTo(name){
   if(name==="tuner"){prevScreen=screen;setScreen("tuner");openTuner();return}
   setScreen(name);
   if(name==="habits")drawHabits();
-  if(name==="chords")setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
+  if(name==="chords")setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
   if(name==="changes"){setSay("Pick 2 to 4 chords and tap Start changes.","Changes");setPrompt("")}
 }
 document.querySelectorAll("#menu button").forEach(b=>b.onclick=()=>goTo(b.dataset.go));
@@ -1255,7 +1294,7 @@ $("clearHist").onclick=()=>{if(!clearArmed){clearArmed=true;$("clearHist").textC
 fillPairs();drawHabits();
 {let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
 buildPicker();drawAll();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
-setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
+setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
 if(!cal&&stored("fretcoach-onboarded")!=="1")showOnboard(0);
 
 // background: a warped green wireframe, drawn once per screen size (static, so it costs nothing while listening)

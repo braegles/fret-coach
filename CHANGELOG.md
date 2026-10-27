@@ -2,6 +2,22 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v38 — 2026-10-27 · Braedon's Claude (branch braedon/setup-prompt)
+- **No more surprise jump to the tuner.** Picking a chord (or Start listening / Start changes) before the guitar
+  has been calibrated now opens a "Quick setup first" panel. It explains that the app listens to each open string
+  once to tune the guitar AND learn how the strings sound, so it can spot muted/buzzing notes. Buttons:
+  **Start setup** (runs the tuner, then continues straight into the chord) or **Skip for now**.
+- **Skip for now** saves *standard settings* (`cal.est = true`): ring/brightness/buzz baselines measured from
+  Braedon's guitar on an iPhone, and `raw = 0` so there's no loudness gate (we don't know this phone's mic level yet).
+  While standard settings are in use, the chord check shows "Using standard settings. Run the Tuner once for more
+  accurate checks." A real tuner run replaces them.
+- **Bug fix:** leaving the tuner before any string was saved used to leave the app stuck on "Starting…" with the mic
+  on. It now stops and says "Setup wasn't finished."
+- Detection maths unchanged, but **standard settings are less accurate than a real calibration** (other guitars and
+  phones differ). Worth a live test: skip setup on a fresh install and check a chord.
+- Tested in a browser: prompt → setup → tuner; leave early → clean stop; prompt → skip → chord check with the note;
+  reload keeps standard settings; Changes asks too; walkthrough + offline load still pass. No script errors.
+
 ## v37 — 2026-10-21 · Braedon's Claude (branch braedon/hide-chords)
 - **Only the original 8 basic chords are shown for now** (Braedon: polish the basics first). 7ths, barre and power
   chords are hidden on the Chords screen and in the Changes loop picker. The group tabs are hidden too, since there's only one group.

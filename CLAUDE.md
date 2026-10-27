@@ -174,6 +174,8 @@ Rename only after the check, then buy the domain and move the site to it.
     gain (auto "mic boost") → AudioWorklet tap → 4 s ring buffer. Onsets = level jump over a noise floor.
   - Tuner doubles as calibration: records each open string's ring time, loudness, brightness and buzz baseline
     ("cal" in localStorage). Everything is judged relative to that.
+    No calibration yet → askSetup() shows "Quick setup first" (Start setup / Skip for now). Skip saves standard
+    settings (cal.est = true, raw 0 = no loudness gate) until a real tuner run replaces them.
   - Flows: checkChord (string by string, stays on a string until fixed, then strum), strumLoop (strum practice).
   - Chord changes: loop of 2–4 chords, times each change, quick 0.5 s strum judge, BPM up after 3 clean on-time
     changes and down after 2 fails, beat dots (no click sound).
