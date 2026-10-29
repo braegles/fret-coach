@@ -33,7 +33,7 @@ The two Claudes can't talk to each other directly. THIS REPO is how they stay in
 - Live app: https://braegles.github.io/fret-coach/  (open on an iPhone in Safari, allow the microphone)
 - Repo: https://github.com/braegles/fret-coach
 - Deploy: merge to `main` (GitHub Pages serves index.html from main; republishes in about a minute).
-  The version tag in the header ("V32") shows what's live. Reopen Safari if the old version sticks.
+  The version tag in the header (e.g. "V38") shows what's live. Reopen Safari if the old version sticks.
 - Teamwork: Braedon adds David as a collaborator (repo Settings → Collaborators). Only one person edits
   index.html at a time, or use branches, so uploads don't overwrite each other.
 
@@ -159,7 +159,7 @@ Rename only after the check, then buy the domain and move the site to it.
 
 ## How the file is laid out (single file: HTML + CSS + JS, no build step, no libraries)
 - CSS: Y2K console look (chrome bevels, hard edges, Anton display font, green wireframe canvas background, LEDs).
-- Screens via the top menu: Chords, Changes, Tuner, Habits, Setup (body[data-screen] CSS rules show/hide panels).
+- Screens via the top menu: Chords, Changes, Notes (fretboard learner, v39), Tuner, Habits, Setup (body[data-screen] CSS rules show/hide panels).
 - JS sections, in order:
   - CHORDS library (29 chords): f = fret per string low E→high e (-1 don't play, 0 open), g = finger 1–4,
     optional barre {fret,from,to}. ALL_GROUPS = Basic / 7ths / Barre / Power; HIDDEN_GROUPS (7ths, Barre,
@@ -174,11 +174,13 @@ Rename only after the check, then buy the domain and move the site to it.
     gain (auto "mic boost") → AudioWorklet tap → 4 s ring buffer. Onsets = level jump over a noise floor.
   - Tuner doubles as calibration: records each open string's ring time, loudness, brightness and buzz baseline
     ("cal" in localStorage). Everything is judged relative to that.
+    No calibration yet → askSetup() shows "Quick setup first" (Start setup / Skip for now). Skip saves standard
+    settings (cal.est = true, raw 0 = no loudness gate) until a real tuner run replaces them.
   - Flows: checkChord (string by string, stays on a string until fixed, then strum), strumLoop (strum practice).
   - Chord changes: loop of 2–4 chords, times each change, quick 0.5 s strum judge, BPM up after 3 clean on-time
     changes and down after 2 fails, beat dots (no click sound).
   - Habits: every result logged on the phone; shows most repeated mistakes + slowest change; "practice weak spot".
-- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -boost, -autoboost, -muteat, -mutever, -screen, -onboarded, -firstchord.
+- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -boost, -autoboost, -muteat, -mutever, -screen, -onboarded, -firstchord, -notestats.
 
 ## Tuning notes (learned from real recordings, iPhone mic)
 - Muted = rings much shorter than calibration (default under 50%, Setup slider). Barre chords get extra slack.
@@ -192,7 +194,8 @@ Rename only after the check, then buy the domain and move the site to it.
 ## Status
 - All 8 basic chords work live. Chord change trainer works well.
 - v31: 29 chords, grouped picker, barre diagrams + tips, 2–4 chord change loops. v32: barre chords less strict.
-- Not yet tested live: most 7ths, barre and power chords.
+- v37: only the 8 basic chords are shown for now. v38: "Quick setup first" prompt + code-review bug fixes.
+- Not yet tested live: 7ths, barre and power chords (hidden for now); "Skip for now" standard settings.
 
 ## Working style
 - Batch changes; build and upload a new version only when ready. Bump the version tag every release.

@@ -2,6 +2,53 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v39 — 2026-10-29 · Braedon's Claude (Issue #25, branch braedon/fretboard, built on #24)
+- **New Notes screen: fretboard learner.** Neck drawn like Braedon's reference chart: pale neck, frets 1–12 down the side,
+  one colour-coded circle per note (same colour = same note everywhere), dots at 3/5/7/9 and a double dot at 12.
+  - **Learn:** pick a string (E A D G B e) for a lesson on why the notes sit where they do, landmarks and tips, plus
+    ◀ ▶ to walk up the string one fret at a time with a sentence per note (half steps, no sharp between B–C / E–F,
+    the 5th-fret rule, fret 12 repeat). **Patterns:** the 12 notes, fret 12 = repeat, 5th-fret rule (G string = 4th),
+    both E strings match, octave shape. **Show me every [note]** lights up all positions. **Naturals only** dims sharps.
+  - **Test:** pick a string (or All). A random note pops up, you play it on that string, and `hear()` (limited to that
+    string's frets 0–12, corrected for the string's tuning offset) says right or wrong and shows the fret you played vs
+    where the note is. Naturals by default, with optional sharps and an optional note-name hint. Notes you miss come up
+    more often. Scores are kept in localStorage `fretcoach-notestats`. Needs calibration (uses the Quick setup prompt from #24).
+- Menu now has 6 keys (Notes added). Labels shrink to fit.
+- Detection maths unchanged (re-uses analyse/hear). Limitation: a note played on the *wrong string* is read as the nearest
+  note this string can play.
+- Camera hand check (#8 / #18) is on hold.
+- Tested in a browser with a stubbed ear: lessons, step text (G string fret 4 = B), patterns, find-a-note, test right/wrong
+  feedback, scoring, stop. No script errors. Needs a live test with the guitar.
+
+## v38 — 2026-10-27 · Braedon's Claude (branch braedon/setup-prompt)
+- **No more surprise jump to the tuner.** Picking a chord (or Start listening / Start changes) before the guitar
+  has been calibrated now opens a "Quick setup first" panel. It explains that the app listens to each open string
+  once to tune the guitar AND learn how the strings sound, so it can spot muted/buzzing notes. Buttons:
+  **Start setup** (runs the tuner, then continues straight into the chord) or **Skip for now**.
+- **Skip for now** saves *standard settings* (`cal.est = true`): ring/brightness/buzz baselines measured from
+  Braedon's guitar on an iPhone, and `raw = 0` so there's no loudness gate (we don't know this phone's mic level yet).
+  While standard settings are in use, the chord check shows "Using standard settings. Run the Tuner once for more
+  accurate checks." A real tuner run replaces them.
+- **Bug fix:** leaving the tuner before any string was saved used to leave the app stuck on "Starting…" with the mic
+  on. It now stops and says "Setup wasn't finished."
+- Detection maths unchanged, but **standard settings are less accurate than a real calibration** (other guitars and
+  phones differ). Worth a live test: skip setup on a fresh install and check a chord.
+- **Code review fixes (Braedon asked for a bug hunt, 2026-10-29):**
+  - Bug: opening a menu screen while the tuner was running *inside a chord check or Changes* only closed the tuner,
+    so the chord check kept listening and judging on the new screen. Leaving the tuner now pauses everything (the
+    strings you tuned are still saved).
+  - Bug: locking the phone / switching apps while listening left the app "listening" to a mic iPhone had cut off.
+    It now pauses cleanly (`visibilitychange`) with a note.
+  - Bug: tapping Skip string while a pluck was being analysed skipped the *next* string too. It now applies to the current one.
+  - Bug: "All basic chords complete. Try another group" when there's only one group. Text now fits.
+  - Redundant: `saveTuning()` ran twice when all six strings were tuned; removed a leftover `fretcoach-done` cleanup;
+    `playable()` now reuses `playableOf()`; fixed two outdated comments.
+  - Left alone on purpose (detection code, needs a recordings re-test): unused `hfRef` (diagnose) and `avgRing`
+    (judgeStrum), the always-1 `ee` in analyse(), duplicate comments there, and `spectrum()` vs `specOf()` doing
+    nearly the same job. Good candidates for the next detection change.
+- Tested in a browser: prompt → setup → tuner; leave early → clean stop; prompt → skip → chord check with the note;
+  reload keeps standard settings; Changes asks too; walkthrough + offline load still pass. No script errors.
+
 ## v37 — 2026-10-21 · Braedon's Claude (branch braedon/hide-chords)
 - **Only the original 8 basic chords are shown for now** (Braedon: polish the basics first). 7ths, barre and power
   chords are hidden on the Chords screen and in the Changes loop picker. The group tabs are hidden too, since there's only one group.

@@ -149,7 +149,7 @@ body:not([data-screen="tuner"]) .tuner{display:none}
 .ob-steps i.on{background:var(--wire);border-color:#000}
 .ob-kicker{font:12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--yellow)}
 .onboard h2{margin:0;font-family:var(--f-disp);font-weight:400;font-size:30px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:#fff;text-shadow:2px 2px 0 #000}
-#obBody{display:grid;gap:12px}
+#obBody,#saBody{display:grid;gap:12px}
 .onboard p{margin:0;font-size:15.5px;line-height:1.5}
 .onboard ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:15px}
 .onboard .controls{grid-template-columns:1fr 1fr}
@@ -172,8 +172,8 @@ ol.habits li span:first-child{min-width:0}
 .settings h2{margin:0;justify-self:start;font-family:var(--f-disp);font-weight:400;font-size:18px;letter-spacing:.08em;text-transform:uppercase;padding:3px 12px;background:var(--metal);color:#101624;border:1px solid #000;box-shadow:var(--bevel)}
 
 /* menu: a chrome console strip of keys; the open screen's key is lit blue with a green LED */
-.menu{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px;background:var(--metal-dark);border:1px solid #000;box-shadow:var(--bevel),0 4px 0 #000}
-.menu button{position:relative;min-height:50px;padding:14px 2px 6px;border:1px solid #000;background:var(--metal);color:#101624;font-family:var(--f-disp);font-size:15px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;box-shadow:var(--bevel);text-shadow:1px 1px 0 rgba(255,255,255,.7)}
+.menu{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:5px;background:var(--metal-dark);border:1px solid #000;box-shadow:var(--bevel),0 4px 0 #000}
+.menu button{position:relative;min-width:0;min-height:50px;padding:14px 1px 6px;border:1px solid #000;background:var(--metal);color:#101624;font-family:var(--f-disp);font-size:clamp(11px,3.1vw,15px);overflow:hidden;white-space:nowrap;letter-spacing:0 !important;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;box-shadow:var(--bevel);text-shadow:1px 1px 0 rgba(255,255,255,.7)}
 .menu button i{position:absolute;top:5px;left:50%;width:16px;height:5px;margin-left:-8px;background:#1b2234;border:1px solid #000}
 .menu button[aria-current="page"]{background:linear-gradient(180deg,#8fb5ff 0%,var(--blue) 50%,#0b2b8e 100%);color:#fff;text-shadow:1px 1px 0 #000;box-shadow:var(--bevel-in)}
 .menu button[aria-current="page"] i{background:var(--wire)}
@@ -182,7 +182,28 @@ ol.habits li span:first-child{min-width:0}
 .led.on{background:var(--wire);box-shadow:var(--bevel)}
 
 /* screens: only the open one's panels show */
-.cgroups,.chords,.stage,.strumcard,.changes,.habitcard,.settings,.tuner{display:none}
+.cgroups,.chords,.stage,.strumcard,.changes,.habitcard,.settings,.tuner,.notescard{display:none}
+body[data-screen="notes"] .notescard{display:grid}
+/* fretboard learner */
+.notescard{padding:12px;gap:10px}
+.notescard h2{margin:0;justify-self:start;font-family:var(--f-disp);font-weight:400;font-size:18px;letter-spacing:.08em;text-transform:uppercase;padding:3px 12px;background:var(--metal);color:#101624;border:1px solid #000;box-shadow:var(--bevel)}
+.fbtabs,.fbstrings,.fbpat{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--metal-dark);border:1px solid #000;box-shadow:var(--bevel),0 3px 0 #000}
+.fbpat{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+.fbtabs button,.fbstrings button,.fbpat button{min-height:40px;min-width:0;padding:0 2px;border:1px solid #000;background:var(--metal);color:#101624;font-family:var(--f-disp);font-size:16px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;box-shadow:var(--bevel);text-shadow:1px 1px 0 rgba(255,255,255,.7)}
+.fbstrings button{text-transform:none;font-size:18px}.fbstrings button[data-p],.fbstrings button[data-s="all"]{text-transform:uppercase;font-size:12px;letter-spacing:0}.fbstrings button[data-p]{grid-column:span 2}
+.fbpat button{font-size:13px;min-height:36px}
+.fbtabs button[aria-pressed="true"],.fbstrings button[aria-pressed="true"],.fbpat button[aria-pressed="true"]{background:linear-gradient(180deg,#ffe98a 0%,var(--yellow) 50%,#9a7a00 100%);box-shadow:var(--bevel-in)}
+#fbLearn,#fbTestBox{display:grid;gap:10px}#fbLearn[hidden],#fbTestBox[hidden]{display:none}
+.fblesson{display:grid;gap:8px;font-size:14.5px;line-height:1.45}
+.fblesson h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:20px;letter-spacing:.03em;text-transform:uppercase;color:var(--yellow)}
+.fblesson p,.fblesson ul{margin:0}.fblesson ul{padding-left:18px;display:grid;gap:4px}.fblesson b{color:#fff}
+.fbstep{display:grid;grid-template-columns:48px 1fr 48px;gap:8px;align-items:center;padding:8px;background:#01040e;border:1px solid #000;box-shadow:var(--bevel-in)}
+.fbstep .btn{min-height:44px;padding:0;font-size:18px}.fbstep p{min-height:3.9em}
+.fbfind{display:flex;align-items:center;gap:8px;font-size:14.5px}
+.fbfind select{min-height:40px;min-width:80px;border:1px solid #000;border-radius:0;background:var(--metal);color:#101624;font:bold 15px var(--f-ui);padding:0 6px}
+#fbSay{font-family:var(--f-ui);font-weight:bold;font-size:18px;line-height:1.3;text-transform:none;letter-spacing:0}
+#fbSay .big{font-family:var(--f-disp);font-weight:400;font-size:34px;color:var(--yellow);vertical-align:-4px}
+.neck{padding:4px;background:#000;border:1px solid #39456b;box-shadow:var(--bevel-in)}.neck svg{display:block;width:100%;height:auto}
 body[data-screen="chords"] .chords{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
 body[data-screen="chords"] .cgroups{display:grid}
 body[data-screen="chords"] .chords button{min-width:0;padding:0 4px}
@@ -219,13 +240,14 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v37</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v39</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
   <nav class="menu" id="menu" aria-label="Sections">
     <button type="button" data-go="chords"><i aria-hidden="true"></i>Chords</button>
     <button type="button" data-go="changes"><i aria-hidden="true"></i>Changes</button>
+    <button type="button" data-go="notes"><i aria-hidden="true"></i>Notes</button>
     <button type="button" data-go="tuner"><i aria-hidden="true"></i>Tuner</button>
     <button type="button" data-go="habits"><i aria-hidden="true"></i>Habits</button>
     <button type="button" data-go="settings"><i aria-hidden="true"></i>Setup</button>
@@ -272,6 +294,21 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
     <button class="btn primary" id="chStart" type="button">Start changes</button>
   </section>
 
+  <section class="card notescard">
+    <h2>Fretboard notes</h2>
+    <nav class="fbtabs" id="fbModes" aria-label="Mode"><button type="button" data-m="learn">Learn</button><button type="button" data-m="test">Test</button></nav>
+    <div id="fbLearn"><nav class="fbstrings" id="fbStrings" aria-label="String"></nav><div class="fblesson" id="fbLesson"></div></div>
+    <div id="fbTestBox" hidden>
+      <nav class="fbstrings" id="fbTestStrings" aria-label="String to test"></nav>
+      <div class="status" id="fbStatus" aria-live="polite"><span class="phase" id="fbPhase">Test</span><p class="say" id="fbSay">Pick a string and tap Start test.</p></div>
+      <label class="autob" for="fbHintCb"><input type="checkbox" id="fbHintCb"> Show the note names (easier)</label>
+      <label class="autob" for="fbSharpCb"><input type="checkbox" id="fbSharpCb"> Include sharps (#)</label>
+      <p class="msg" id="fbScore"></p>
+      <button class="btn primary" id="fbGo" type="button">Start test</button>
+    </div>
+    <div class="neck"><svg id="neck" role="img" aria-label="Notes on the neck"></svg></div>
+  </section>
+
   <section class="card habitcard">
     <h2>Your habits</h2>
     <div id="habits"></div>
@@ -290,6 +327,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
   </section>
 </div>
 
+<div class="onboard" id="setupAsk" hidden role="dialog" aria-modal="true" aria-labelledby="saTitle">
+  <section class="card">
+    <span class="ob-kicker">Before you start</span>
+    <h2 id="saTitle">Quick setup first</h2>
+    <div id="saBody">
+      <p>Before it can check chords, the app listens to each open string once. That does two things: it <b>tunes your guitar</b>, and it <b>learns how your strings sound</b> in your room, so it can tell when a note is muted or buzzing.</p>
+      <p><b>Already in tune?</b> It's still quick: pluck each string once and the needle goes green. About 30 seconds, and only once on this phone.</p>
+    </div>
+    <div class="controls"><button class="btn" id="saSkip" type="button">Skip for now</button><button class="btn primary" id="saGo" type="button" style="grid-column:auto">Start setup</button></div>
+    <p class="note" style="margin:0">Skipping uses standard settings, so the muted and buzz checks are a bit less accurate. You can run the Tuner any time.</p>
+  </section>
+</div>
 <div class="onboard" id="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="obTitle">
   <section class="card">
     <div class="ob-steps" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -358,7 +407,7 @@ let chord="C", results=[], current=-1, strumRes=null;
 let running=false, gen=0, skipFlag=false, practice=false;
 let tuning=false, tuneIdx=0, tuneRes=[], tuneCents=null;
 // completed chords last for this session only: reopening the app starts fresh
-let doneSet=new Set(); try{localStorage.removeItem("fretcoach-done")}catch(e){}
+let doneSet=new Set();
 // "cal" = what the tuner learned about each string: tuning offset, ring time, pluck loudness, brightness
 let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&cal.v!==4)cal=null}catch(e){}
 // mute sensitivity: a note counts as muted when its ring is below this % of the same string's tuner pluck
@@ -368,10 +417,10 @@ let boostDb=18,autoBoost=true; try{const b=parseFloat(localStorage.getItem("fret
 // every job captures the generation it started in; starting a new job or pausing bumps it, so old jobs fall away at once
 const liveFn=()=>{const g=gen;return ()=>running&&g===gen};
 let alive=liveFn();
-const playable=()=>CHORDS[chord].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
+const playable=()=>playableOf(chord);
 
 // ---------- drawing ----------
-// chord picker: a row of group tabs (Basic / 7ths / Barre / Power) over a grid of chord keys for that group
+// chord picker: group tabs over a grid of chord keys (tabs are hidden while only one group is shown, see HIDDEN_GROUPS)
 let curGroup=groupOf(chord);
 function buildPicker(){
   const ng=Object.keys(GROUPS).length;$("cgroups").style.gridTemplateColumns=`repeat(${ng},1fr)`;
@@ -413,7 +462,7 @@ function drawBoard(){
   s+=`<rect x="${X0}" y="${T}" width="${4*FW}" height="${6*22+2}" fill="#07122e"/>`;
   // fret numbers
   for(let n=start;n<start+4;n++)s+=`<text x="${fx(n)}" y="${T-9}" text-anchor="middle" font-family="Share Tech Mono, Courier New, monospace" font-size="13" fill="#2bff5a">${n}</text>`;
-  // inlay at the 3rd fret
+  // fret-marker inlays (3, 5, 7, 9) that fall inside the window
   for(const n of [3,5,7,9])if(n>=start&&n<start+4)s+=`<rect x="${fx(n)-5}" y="${y(2.5)-5}" width="10" height="10" transform="rotate(45 ${fx(n)} ${y(2.5)})" fill="url(#fbChrome)" opacity=".35"/>`;
   // frets and nut: chrome bars with hard dark edges
   for(let n=1;n<=4;n++)s+=`<rect x="${X0+n*FW-2.5}" y="${T}" width="5" height="${6*22+2}" fill="url(#fbBar)" stroke="#000" stroke-width=".8"/>`;
@@ -863,7 +912,7 @@ async function tuneGuitar(ok=alive){
         tuneRes[i]={cents:pc,ring:lastPluck.ring??TYPICAL_RING,peak:lastPluck.peak,raw:lastPluck.peak/Math.pow(10,lastPluck.gainDb/20),hf:lastPluck.hf,flat:lastPluck.flat};
         beep();setTuneText("In tune ✓",`${cap(STR[i].full)} done.`,"good");drawTuner();
         await sleep(700);if(!ok()||!tuning)break;
-        if(STR.every((_,k)=>tuneRes[k])){saveTuning();setTuneText("All six strings in tune ✓","Tap Done, or pick a string to check it again.","good");tuneCents=null;drawTuner();await sleep(900);break}
+        if(STR.every((_,k)=>tuneRes[k])){setTuneText("All six strings in tune ✓","Tap Done, or pick a string to check it again.","good");tuneCents=null;drawTuner();await sleep(900);break}
         nextString();continue;
       }
       setTuneText("In tune ✓",lastPluck?"Hold it…":"Pluck it once more so I can learn how it sounds.","good");
@@ -890,6 +939,28 @@ function saveTuning(){
   cal={v:4,s,at:Date.now()};try{localStorage.setItem("fretcoach-cal",JSON.stringify(cal))}catch(e){}
   return true;
 }
+// "Skip for now": standard settings measured from a real guitar on an iPhone. raw = 0 switches off the loudness
+// gate (we don't know this phone's mic level yet), so every clear pluck is heard.
+const EST_BASE=[{ring:0.86,hf:1.4e-3,flat:0.0047},{ring:0.56,hf:6.8e-4,flat:0.0133},{ring:1.04,hf:4.0e-3,flat:0.0173},
+  {ring:0.84,hf:1.22e-2,flat:0.0020},{ring:0.71,hf:1.32e-2,flat:0.0027},{ring:0.66,hf:1.5e-2,flat:0.0021}];
+function useEstimatedCal(){
+  cal={v:4,est:true,at:Date.now(),s:EST_BASE.map(x=>({cents:0,raw:0,...x}))};
+  try{localStorage.setItem("fretcoach-cal",JSON.stringify(cal))}catch(e){}
+}
+// No calibration yet: explain the quick setup instead of jumping to the tuner. Both buttons call `go` straight from
+// the tap, which is what lets Safari open the mic.
+function askSetup(go){
+  $("setupAsk").hidden=false;$("saGo").focus();
+  $("saGo").onclick=()=>{$("setupAsk").hidden=true;go()};   // go() runs the tuner first, because there's still no calibration
+  $("saSkip").onclick=()=>{$("setupAsk").hidden=true;useEstimatedCal();go()};
+}
+const estNote=()=>cal?.est?"Using standard settings. Run the Tuner once for more accurate checks.":"";
+// the tuner was closed before any string was saved: stop cleanly instead of sitting on "Starting…"
+function setupNotDone(){
+  stopListening();
+  setSay("Setup wasn't finished.","Setup","warn");
+  setPrompt("Pick a chord to try again, or choose Skip for now to use standard settings.");
+}
 function endTuner(){
   tuning=false;tuneCents=null;if(screen==="tuner")setScreen(prevScreen==="tuner"?"chords":prevScreen);setControls();drawAll();
   return false;
@@ -898,19 +969,20 @@ function endTuner(){
 // ---------- chord check ----------
 async function checkChord(ok=alive){
   if(!cal){
-    const saved=await tuneGuitar(ok);if(!saved||!ok())return;
+    const saved=await tuneGuitar(ok);if(!ok())return;if(!saved)return setupNotDone();
   }
   results=[];strumRes=null;current=playable()[0];drawAll();
-  setSay(`Hold ${lab(chord)}, then pluck the ${STR[current].full}.`,`${lab(chord)} · string ${6-current}`);setPrompt("");
+  setSay(`Hold ${lab(chord)}, then pluck the ${STR[current].full}.`,`${lab(chord)} · string ${6-current}`);
+  setPrompt(estNote());
   const thr=await noiseFloor();if(!ok())return;
   let from=after(0.6);
   for(const i of playable()){
     let tries=0,missed=0,mutedOnce=false;
     while(ok()){
       current=i;drawBoard();
-      if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt("")}
+      if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt(estNote())}
       const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12,()=>0.3*pluckLvl(i));if(a===null)return;
-      if(a==="skip"){results[i]=null;from=A.total;break}
+      if(a==="skip"||skipFlag){skipFlag=false;results[i]=null;from=A.total;break}   // Skip tapped while the pluck was being analysed counts for this string
       // no clear note and quieter than half a normal pluck: hand noise while setting up, so just keep listening
       if(!a.f&&cal?.s?.[i]?.raw&&a.peak/Math.pow(10,a.gainDb/20)<0.5*cal.s[i].raw){from=after(0.05);continue}
       // a pluck with no clear note at all is often a bad catch, not a muted string: ask once more before blaming a finger
@@ -1049,7 +1121,7 @@ function quickJudge(seg,pre,target){
 // a loop of 2–4 chords: strum the first to start the clock, then each clean strum of the next chord is one timed change.
 // After the last chord it loops back to the first. Each change is logged, so Habits can show your slowest one.
 async function changeDrill(seq,ok=alive){
-  if(!cal){const saved=await tuneGuitar(ok);if(!saved||!ok())return}
+  if(!cal){const saved=await tuneGuitar(ok);if(!ok())return;if(!saved)return setupNotDone()}
   drillOn=true;setControls();
   const n=seq.length,nm=seq.map(lab),key=seqKey(seq);let bpm=changeBpm[key]||60,streak=0,fails=0,times=[];const per={};
   const showStats=last=>{
@@ -1126,9 +1198,188 @@ async function startChanges(seq){
   SLOTS.forEach((id,j)=>$(id).value=seq[j]||"");showPairStats();
   if(screen!=="changes")setScreen("changes");
   practice=false;
-  if(!running&&!await start())return;
-  runJob(()=>changeDrill(seq));
+  const go=async()=>{if(!running&&!await start())return;runJob(()=>changeDrill(seq))};
+  if(!cal){askSetup(go);return}
+  go();
 }
+
+
+// ---------- fretboard learner (Issue #25) ----------
+// Learn the notes one string at a time (with the "why" and the patterns), or test yourself: a random note pops up,
+// you play it on that string, and the pitch detection says if it's right. The neck is drawn like Braedon's reference
+// chart: a pale neck, frets down the side, and one coloured circle per note.
+const NOTE_NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const FLAT_OF={"C#":"D♭","D#":"E♭","F#":"G♭","G#":"A♭","A#":"B♭"};
+const NOTE_COL={E:"#000000",F:"#1f7ae0","F#":"#7a3b0c",G:"#0b4a3c","G#":"#9a9a9a",A:"#e8141c","A#":"#13136b",B:"#7f7f12",
+  C:"#f78bd8","C#":"#2cd65a",D:"#f2d600","D#":"#4a0a2e"};
+const FB_FRETS=12;
+const noteAt=(s,f)=>NOTE_NAMES[(STR[s].midi+f)%12];
+const isSharp=n=>n.includes("#");
+const sayNote=n=>isSharp(n)?`${n} (also called ${FLAT_OF[n]})`:n;
+// what makes each string easy to remember
+const FB_LESSON=[
+  {t:"Low E string (6th, thickest)",why:"The open string is E. Going up one fret at a time you walk through the 12 notes in order: E, F, F#, G, G#, A, A#, B, C, C#, D, D#, and at fret 12 you're back on E.",
+   tips:["E to F is only <b>one fret</b>: there's no sharp between E and F. The same goes for B to C (frets 7 and 8).","The dots are landmarks: fret 3 = <b>G</b>, 5 = <b>A</b>, 7 = <b>B</b>, 9 = <b>C#</b>, 12 = <b>E</b> again.","Fret 5 is <b>A</b>, the same note as the open A string next to it. That's the 5th-fret rule (see Patterns)."]},
+  {t:"A string (5th)",why:"Open A. Same idea: each fret is the next note, and at fret 12 it's A again.",
+   tips:["B to C is one fret (frets 2 → 3), with no sharp in between.","Fret 3 = <b>C</b>, 5 = <b>D</b>, 7 = <b>E</b>, 12 = <b>A</b>.","Fret 5 is <b>D</b>, the open note of the next string."]},
+  {t:"D string (4th)",why:"Open D. It follows the same rules, so it has the A string's layout shifted over: D, D#, E, F…",
+   tips:["E to F is one fret (frets 2 → 3).","Fret 3 = <b>F</b>, 5 = <b>G</b>, 7 = <b>A</b>, 12 = <b>D</b>.","Fret 5 is <b>G</b>, the open note of the next string."]},
+  {t:"G string (3rd)",why:"Open G. The G string is the odd one out: it's tuned only 4 frets below the B string, not 5.",
+   tips:["So here it's fret <b>4</b> (not 5) that matches the next open string: fret 4 = <b>B</b>.","B to C is one fret (frets 4 → 5), and E to F is too (frets 9 → 10).","Fret 5 = <b>C</b>, 7 = <b>D</b>, 12 = <b>G</b>."]},
+  {t:"B string (2nd)",why:"Open B. It starts right on one of the 'no sharp' pairs: B to C is just one fret.",
+   tips:["Fret 1 = <b>C</b> straight away. E to F is frets 5 → 6.","Fret 3 = <b>D</b>, 5 = <b>E</b>, 7 = <b>F#</b>, 12 = <b>B</b>.","Fret 5 is <b>E</b>, the open note of the high e string."]},
+  {t:"High e string (1st, thinnest)",why:"Open E, two octaves above the low E. Every note is in the same place as on the low E string.",
+   tips:["Learn the low E and you already know this one: fret 3 = <b>G</b>, 5 = <b>A</b>, 7 = <b>B</b>, 8 = <b>C</b>, 12 = <b>E</b>.","E to F (frets 0 → 1) and B to C (7 → 8) are the one-fret pairs."]}
+];
+const FB_PATTERNS=[
+  {t:"The 12 notes",why:"Music only has 12 notes. In order: A, A#, B, C, C#, D, D#, E, F, F#, G, G#, then A again. One fret = one step up this list (a <b>half step</b>). The plain letters A–G are the <b>natural</b> notes. Between most of them sits a sharp (#), except <b>B–C</b> and <b>E–F</b>, which are next to each other. A sharp has a second name: A# is the same note as B♭ (B flat).",
+   hi:(s,f)=>!isSharp(noteAt(s,f))},
+  {t:"Fret 12 = repeat",why:"At fret 12 (the double dot) every string is back to its open note, one <b>octave</b> higher. Everything above fret 12 repeats frets 0–11, so learning frets 0–12 covers the whole neck.",
+   hi:(s,f)=>f===0||f===12},
+  {t:"5th-fret rule",why:"Fret 5 of a string is the same note as the next string's open note. That's how guitars are tuned. The exception: on the G string it's <b>fret 4</b>, because G and B are tuned 4 frets apart.",
+   hi:(s,f)=>(s<5&&f===(s===3?4:5))||(s>0&&f===0)},
+  {t:"Both E strings match",why:"The low E and high e strings are both E, two octaves apart, so every note sits at the same fret on both. Learn one, get the other free.",
+   hi:s=>s===0||s===5},
+  {t:"Octave shape",why:"Same note, one octave up: go <b>2 strings over and 2 frets up</b>. Lit up: F on the low E (fret 1) → D string fret 3 → B string fret 6, and C on the A string (fret 3) → G string fret 5. When the jump crosses the G–B gap, go <b>3</b> frets up instead (the G–B exception again).",
+   hi:(s,f)=>(s===0&&f===1)||(s===2&&f===3)||(s===4&&f===6)||(s===1&&f===3)||(s===3&&f===5)},
+];
+let fbMode="learn",fbString=0,fbStep=-1,fbPattern=-1,fbFind="",fbNat=false,fbTestStr="0",fbHints=false,fbSharps=false;
+let fbTest=null;   // {s, note, shown:{target,heard,ok}}
+let fbStats={};try{fbStats=JSON.parse(localStorage.getItem("fretcoach-notestats")||"{}")}catch(e){}
+function drawNeck(){
+  const N=FB_FRETS,X0=44,CW=52,Y0=46,RH=34,W=X0+5*CW+40,H=Y0+N*RH+18,cx=s=>X0+s*CW,cy=f=>f===0?24:Y0+(f-0.5)*RH;
+  let svg=`<rect width="${W}" height="${H}" fill="#020818"/>`;
+  svg+=`<rect x="${cx(0)-18}" y="${Y0}" width="${5*CW+36}" height="${N*RH}" fill="#fff4a3"/>`;
+  for(let f=1;f<=N;f++){const y=Y0+f*RH;svg+=`<rect x="${cx(0)-18}" y="${y-2}" width="${5*CW+36}" height="4" fill="#8a8a8a"/>`;
+    svg+=`<text x="${cx(0)-24}" y="${cy(f)+6}" text-anchor="end" font-family="Anton, Impact, sans-serif" font-size="17" fill="#e8eef8">${f}</text>`}
+  svg+=`<rect x="${cx(0)-18}" y="${Y0-4}" width="${5*CW+36}" height="6" fill="#000"/>`;   // nut
+  for(const f of [3,5,7,9])svg+=`<circle cx="${(cx(2)+cx(3))/2}" cy="${cy(f)}" r="6" fill="#c9c9c9"/>`;
+  svg+=`<circle cx="${(cx(1)+cx(2))/2}" cy="${cy(12)}" r="6" fill="#c9c9c9"/><circle cx="${(cx(3)+cx(4))/2}" cy="${cy(12)}" r="6" fill="#c9c9c9"/>`;
+  for(let s=0;s<6;s++)svg+=`<rect x="${cx(s)-1-(5-s)*0.25}" y="${Y0}" width="${2+(5-s)*0.5}" height="${N*RH}" fill="#6d6d6d"/>`;
+  const t=fbTest;
+  for(let s=0;s<6;s++)for(let f=0;f<=N;f++){
+    const n=noteAt(s,f);let show=true,dim=false,ring="";
+    if(fbMode==="learn"){
+      if(fbPattern>=0){dim=!FB_PATTERNS[fbPattern].hi(s,f)}
+      else if(fbFind){dim=n!==fbFind}
+      else{dim=s!==fbString;if(fbStep>=0&&s===fbString&&f===fbStep)ring="#2bff5a";else if(fbStep>=0&&s===fbString&&f>fbStep)dim=true}
+      if(fbNat&&isSharp(n))dim=true;
+    }else{
+      const ts=t?t.s:+fbTestStr;dim=s!==ts&&fbTestStr!=="all";
+      show=fbHints||f===0;   // open strings always labelled; the rest only with hints on
+      if(t?.shown&&s===t.s){
+        if(t.shown.target.includes(f)){show=true;ring="#2bff5a"}
+        if(t.shown.heard===f&&!t.shown.ok){show=true;ring="#ff3b3b"}
+      }
+    }
+    const x=cx(s),y=cy(f),r=f===0?15:14;
+    if(!show){svg+=`<circle cx="${x}" cy="${y}" r="${r-3}" fill="none" stroke="#9a9a9a" stroke-width="1.5" opacity="${dim?.25:.7}"/>`;continue}
+    svg+=`<g opacity="${dim?.18:1}">${ring?`<circle cx="${x}" cy="${y}" r="${r+4}" fill="none" stroke="${ring}" stroke-width="4"/>`:""}<circle cx="${x}" cy="${y}" r="${r}" fill="${NOTE_COL[n]}" stroke="#000" stroke-width="1"/>`+
+      `<text x="${x}" y="${y+5}" text-anchor="middle" font-family="Verdana, sans-serif" font-weight="bold" font-size="${n.length>1?11:13}" fill="#fff" stroke="#000" stroke-width="2.5" paint-order="stroke">${n}</text></g>`;
+  }
+  $("neck").setAttribute("viewBox",`0 0 ${W} ${H}`);$("neck").innerHTML=svg;
+}
+function fbStepText(s,f){
+  const n=noteAt(s,f),nx=s<5?STR[s+1].n:null;
+  if(f===0)return `Open string: <b>${n}</b>. Every fret from here moves up one note.`;
+  const p=noteAt(s,f-1);let t;
+  if(isSharp(n))t=`Fret ${f}: <b>${sayNote(n)}</b>, the sharp between ${p} and ${noteAt(s,f+1)}.`;
+  else if(!isSharp(p))t=`Fret ${f}: <b>${n}</b>. ${p} to ${n} is one fret, with no sharp in between.`;
+  else t=`Fret ${f}: <b>${n}</b>, the next natural note.`;
+  if(f===12)t+=` Back to ${n}, one octave up (double dot). From here the pattern repeats.`;
+  else if([3,5,7,9].includes(f))t+=` There's a dot here: a handy landmark.`;
+  if(nx&&f===(s===3?4:5))t+=` Same note as the open ${nx==="e"?"high e":nx} string${s===3?" (fret 4 on the G string, not 5)":""}.`;
+  return t;
+}
+function drawFb(){
+  document.querySelectorAll("#fbModes button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===fbMode));
+  $("fbLearn").hidden=fbMode!=="learn";$("fbTestBox").hidden=fbMode!=="test";
+  if(fbMode==="learn"){
+    $("fbStrings").innerHTML=STR.map((st,i)=>`<button type="button" data-s="${i}" aria-pressed="${fbPattern<0&&!fbFind&&i===fbString}">${st.n}</button>`).join("")+
+      `<button type="button" data-p="1" aria-pressed="${fbPattern>=0}">Patterns</button>`;
+    $("fbStrings").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.p){fbPattern=Math.max(0,fbPattern);fbFind=""}else{fbString=+b.dataset.s;fbPattern=-1;fbFind="";fbStep=-1}drawFb()});
+    let h="";
+    if(fbPattern>=0){
+      const P=FB_PATTERNS[fbPattern];
+      h=`<div class="fbpat">${FB_PATTERNS.map((p,i)=>`<button type="button" data-i="${i}" aria-pressed="${i===fbPattern}">${p.t}</button>`).join("")}</div><h3>${P.t}</h3><p>${P.why}</p>`;
+    }else if(fbFind){
+      h=`<h3>Every ${sayNote(fbFind)}</h3><p>Lit up below. Notice the shapes: the same note shows up 5 frets apart on neighbouring strings (4 between G and B), and again 12 frets up.</p>`;
+    }else{
+      const L=FB_LESSON[fbString];
+      h=`<h3>${L.t}</h3><p>${L.why}</p><ul>${L.tips.map(x=>`<li>${x}</li>`).join("")}</ul>`+
+        `<div class="fbstep"><button type="button" class="btn" id="fbPrev">◀</button><p id="fbStepTxt">${fbStep<0?"Tap ▶ to walk up this string one fret at a time.":fbStepText(fbString,fbStep)}</p><button type="button" class="btn" id="fbNext">▶</button></div>`;
+    }
+    h+=`<label class="fbfind">Show me every <select id="fbFindSel"><option value="">—</option>${NOTE_NAMES.slice(4).concat(NOTE_NAMES.slice(0,4)).map(n=>`<option${n===fbFind?" selected":""}>${n}</option>`).join("")}</select></label>`+
+       `<label class="autob" for="fbNatCb"><input type="checkbox" id="fbNatCb"${fbNat?" checked":""}> Naturals only (dim the sharps)</label>`;
+    $("fbLesson").innerHTML=h;
+    $("fbLesson").querySelectorAll(".fbpat button").forEach(b=>b.onclick=()=>{fbPattern=+b.dataset.i;drawFb()});
+    if($("fbPrev")){$("fbPrev").onclick=()=>{fbStep=Math.max(-1,fbStep-1);drawFb()};$("fbNext").onclick=()=>{fbStep=Math.min(FB_FRETS,fbStep+1);drawFb()}}
+    $("fbFindSel").onchange=e=>{fbFind=e.target.value;if(fbFind)fbPattern=-1;drawFb()};
+    $("fbNatCb").onchange=e=>{fbNat=e.target.checked;drawFb()};
+  }else{
+    $("fbTestStrings").innerHTML=STR.map((st,i)=>`<button type="button" data-s="${i}" aria-pressed="${fbTestStr===String(i)}">${st.n}</button>`).join("")+`<button type="button" data-s="all" aria-pressed="${fbTestStr==="all"}">All</button>`;
+    $("fbTestStrings").querySelectorAll("button").forEach(b=>b.onclick=()=>{fbTestStr=b.dataset.s;if(fbTest)stopNoteTest();drawFb()});
+    $("fbHintCb").checked=fbHints;$("fbSharpCb").checked=fbSharps;
+    $("fbGo").textContent=fbTest&&running?"Stop test":"Start test";
+    const st=fbStats[fbTestStr];$("fbScore").innerHTML=st?`This string: <b>${st.r}</b> right of <b>${st.r+st.w}</b>${fbTest?.streak?` · streak <b>${fbTest.streak}</b>`:""}`:"";
+  }
+  drawNeck();
+}
+function fbSay(text,phase,kind=""){$("fbSay").innerHTML=text;$("fbPhase").textContent=phase;$("fbStatus").className="status "+kind}
+// pick the next note: weaker notes (more misses) come up more often, never the same one twice in a row
+function nextTestNote(prev){
+  const strs=fbTestStr==="all"?[0,1,2,3,4,5]:[+fbTestStr],s=strs[Math.floor(Math.random()*strs.length)];
+  const pool=[...new Set(Array.from({length:12},(_,f)=>noteAt(s,f)))].filter(n=>(fbSharps||!isSharp(n))&&!(prev&&prev.s===s&&prev.note===n));
+  const w=pool.map(n=>{const k=fbStats[s+"|"+n];return 1+(k?2*k.w/(k.r+k.w+1):0.5)}),tot=w.reduce((a,b)=>a+b,0);
+  let x=Math.random()*tot,i=0;while(x>w[i]&&i<pool.length-1){x-=w[i];i++}
+  return {s,note:pool[i]};
+}
+function fbRecord(s,n,ok){
+  for(const k of new Set([s+"|"+n,String(s),fbTestStr])){const e=fbStats[k]||(fbStats[k]={r:0,w:0});ok?e.r++:e.w++}
+  try{localStorage.setItem("fretcoach-notestats",JSON.stringify(fbStats))}catch(e){}
+}
+async function noteTest(ok=alive){
+  if(!cal){const saved=await tuneGuitar(ok);if(!ok())return;if(!saved)return setupNotDone()}
+  if(screen!=="notes")setScreen("notes");
+  fbTest={streak:0};drawFb();
+  fbSay("Quiet for a moment…","Get ready");
+  const thr=await noiseFloor();if(!ok())return;
+  let from=after(0.3),q=null;
+  while(ok()){
+    q=nextTestNote(q);fbTest={...fbTest,s:q.s,note:q.note,shown:null};drawFb();
+    const sName=STR[q.s].full,t0=performance.now();
+    fbSay(`Play <b class="big">${q.note}</b> on the ${sName}`,`${STR[q.s].n} string`);
+    let done=false,missed=0;
+    while(ok()&&!done){
+      const lo=STR[q.s].midi-1,hi=STR[q.s].midi+FB_FRETS+1;
+      const a=await hear(thr,from,lo,hi,()=>0.3*pluckLvl(q.s));if(a===null)return;
+      if(a==="skip"){done=true;break}
+      from=after(0.15);
+      if(!a.f){if(++missed<3)fbSay(`Didn't catch that. Play <b class="big">${q.note}</b> on the ${sName} again`,`${STR[q.s].n} string`);continue}
+      // which fret was played: nearest note, corrected for how this string was tuned
+      const m=Math.round(semis(a.f)-(cal?.s?.[q.s]?.cents||0)/100),fret=m-STR[q.s].midi,heard=NOTE_NAMES[((m%12)+12)%12];
+      const target=Array.from({length:FB_FRETS+1},(_,f)=>f).filter(f=>noteAt(q.s,f)===q.note);
+      const okNote=heard===q.note,secs=(performance.now()-t0)/1000;
+      fbTest.shown={target,heard:fret>=0&&fret<=FB_FRETS?fret:null,ok:okNote};
+      fbRecord(q.s,q.note,okNote);
+      if(okNote){fbTest.streak++;beep();fbSay(`${q.note} ✓ fret ${target.includes(fret)?fret:target[0]} · ${secs.toFixed(1)} s`,fbTest.streak>2?`Streak ${fbTest.streak}`:"Correct","good")}
+      else{fbTest.streak=0;fbSay(`That was <b>${heard}</b>${fret>=0&&fret<=FB_FRETS?` (fret ${fret})`:""}. <b>${q.note}</b> is at fret ${target.join(" and ")} on the ${sName}.`,"Not quite","fix")}
+      drawFb();done=true;
+      await pause(okNote?900:2600,ok);from=after(0.1);
+    }
+  }
+}
+function stopNoteTest(){if(running)pauseAll();fbTest=null;fbSay("Pick a string and tap Start test.","Test");drawFb()}
+function startNoteTest(){
+  if(fbTest&&running){stopNoteTest();return}
+  const go=async()=>{if(!running&&!await start())return;runJob(()=>noteTest())};
+  if(!cal){askSetup(go);return}
+  go();
+}
+document.querySelectorAll("#fbModes button").forEach(b=>b.onclick=()=>{if(fbTest)stopNoteTest();fbMode=b.dataset.m;drawFb()});
+$("fbGo").onclick=startNoteTest;
+$("fbHintCb").onchange=e=>{fbHints=e.target.checked;drawFb()};
+$("fbSharpCb").onchange=e=>{fbSharps=e.target.checked;drawFb()};
 
 // ---------- controls ----------
 function setControls(){
@@ -1154,7 +1405,7 @@ function finishChord(){
   stopListening();
   const gname={Basic:"basic","7ths":"7th",Barre:"barre",Power:"power"}[groupOf(chord)],left=GROUPS[groupOf(chord)].filter(k=>!doneSet.has(k));
   setSay(`${lab(chord)} complete ✓`,"Complete","good");
-  setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. Try another group, or tap any chord to practise it again.`);
+  setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. ${Object.keys(GROUPS).length>1?"Try another group, or tap":"Tap"} any chord to practise it again.`);
 }
 function pauseAll(){stopListening();setSay("Paused.","Paused");setPrompt("Pick a chord or tap Start listening to continue.")}
 // picking a chord always starts checking it; the tap itself is what lets the browser open the mic
@@ -1164,12 +1415,15 @@ async function pickChord(k){
   if(groupOf(k)!==curGroup){curGroup=groupOf(k);buildPicker()}
   chord=k;results=[];strumRes=null;current=-1;practice=false;setControls();drawAll();
   setSay(`${lab(k)}: getting ready…`,"Starting");setPrompt("");
-  if(!running&&!await start())return;
-  runJob(()=>checkChord());
+  const go=async()=>{if(!running&&!await start())return;runJob(()=>checkChord())};
+  if(!cal){if(running)pauseAll();setSay(`${lab(k)}: quick setup first.`,"Setup");askSetup(go);return}
+  go();
 }
 $("start").onclick=async()=>{
   if(running)return pauseAll();
-  if(await start()){practice=false;setControls();runJob(()=>checkChord())}
+  const go=async()=>{if(await start()){practice=false;setControls();runJob(()=>checkChord())}};
+  if(!cal){askSetup(go);return}
+  go();
 };
 $("skip").onclick=()=>{skipFlag=true};
 $("strumBtn").onclick=()=>{
@@ -1191,15 +1445,20 @@ async function openTuner(){
 // switching screens stops whatever was listening; the Tuner key starts the tuner (the tap lets the browser open the mic)
 async function goTo(name){
   if(name===screen&&name!=="tuner")return;
-  if(tuning&&name!=="tuner"){prevScreen=name;tuning=false;return}   // the tuner saves and closes, then lands on the picked screen
+  // leaving the tuner: whatever was listening stops (the tuner still saves the strings you tuned), then go to the picked screen.
+  // (It used to only close the tuner, so a chord check that had opened it kept listening on the new screen.)
+  if(tuning)prevScreen=name;
   if(running)pauseAll();
   if(name==="tuner"){prevScreen=screen;setScreen("tuner");openTuner();return}
   setScreen(name);
   if(name==="habits")drawHabits();
-  if(name==="chords")setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
+  if(name==="chords")setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
   if(name==="changes"){setSay("Pick 2 to 4 chords and tap Start changes.","Changes");setPrompt("")}
+  if(name==="notes"){fbTest=null;fbSay("Pick a string and tap Start test.","Test");drawFb()}
 }
 document.querySelectorAll("#menu button").forEach(b=>b.onclick=()=>goTo(b.dataset.go));
+// the phone locks or you switch apps: iPhone cuts the mic, so pause cleanly instead of "listening" to nothing
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&running){pauseAll();setPrompt("Paused while the app was in the background. Pick a chord to carry on.")}});
 // ---------- first-run walkthrough ----------
 // Shown once to new users (no tuner calibration yet): what it does → phone setup + mic → tune.
 // The last button opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is highlighted as the first chord.
@@ -1253,9 +1512,9 @@ let clearArmed=false;
 $("clearHist").onclick=()=>{if(!clearArmed){clearArmed=true;$("clearHist").textContent="Tap again to clear";setTimeout(()=>{clearArmed=false;$("clearHist").textContent="Clear history"},3000);return}
   clearArmed=false;LOG=[];try{localStorage.removeItem(LOG_KEY)}catch(e){};$("clearHist").textContent="Cleared";setTimeout(()=>$("clearHist").textContent="Clear history",1500);drawHabits()};
 fillPairs();drawHabits();
-{let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
-buildPicker();drawAll();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
-setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? The tuner opens first.","Ready");
+{let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","notes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
+buildPicker();drawAll();drawFb();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
+setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
 if(!cal&&stored("fretcoach-onboarded")!=="1")showOnboard(0);
 
 // background: a warped green wireframe, drawn once per screen size (static, so it costs nothing while listening)
