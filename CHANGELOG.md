@@ -15,6 +15,19 @@ Newest first. Each entry: version · who · what changed · what's left · notes
   on. It now stops and says "Setup wasn't finished."
 - Detection maths unchanged, but **standard settings are less accurate than a real calibration** (other guitars and
   phones differ). Worth a live test: skip setup on a fresh install and check a chord.
+- **Code review fixes (Braedon asked for a bug hunt, 2026-10-29):**
+  - Bug: opening a menu screen while the tuner was running *inside a chord check or Changes* only closed the tuner,
+    so the chord check kept listening and judging on the new screen. Leaving the tuner now pauses everything (the
+    strings you tuned are still saved).
+  - Bug: locking the phone / switching apps while listening left the app "listening" to a mic iPhone had cut off.
+    It now pauses cleanly (`visibilitychange`) with a note.
+  - Bug: tapping Skip string while a pluck was being analysed skipped the *next* string too. It now applies to the current one.
+  - Bug: "All basic chords complete. Try another group" when there's only one group. Text now fits.
+  - Redundant: `saveTuning()` ran twice when all six strings were tuned; removed a leftover `fretcoach-done` cleanup;
+    `playable()` now reuses `playableOf()`; fixed two outdated comments.
+  - Left alone on purpose (detection code, needs a recordings re-test): unused `hfRef` (diagnose) and `avgRing`
+    (judgeStrum), the always-1 `ee` in analyse(), duplicate comments there, and `spectrum()` vs `specOf()` doing
+    nearly the same job. Good candidates for the next detection change.
 - Tested in a browser: prompt → setup → tuner; leave early → clean stop; prompt → skip → chord check with the note;
   reload keeps standard settings; Changes asks too; walkthrough + offline load still pass. No script errors.
 

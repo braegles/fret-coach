@@ -370,7 +370,7 @@ let chord="C", results=[], current=-1, strumRes=null;
 let running=false, gen=0, skipFlag=false, practice=false;
 let tuning=false, tuneIdx=0, tuneRes=[], tuneCents=null;
 // completed chords last for this session only: reopening the app starts fresh
-let doneSet=new Set(); try{localStorage.removeItem("fretcoach-done")}catch(e){}
+let doneSet=new Set();
 // "cal" = what the tuner learned about each string: tuning offset, ring time, pluck loudness, brightness
 let cal=null; try{cal=JSON.parse(localStorage.getItem("fretcoach-cal")||"null");if(cal&&cal.v!==4)cal=null}catch(e){}
 // mute sensitivity: a note counts as muted when its ring is below this % of the same string's tuner pluck
@@ -380,10 +380,10 @@ let boostDb=18,autoBoost=true; try{const b=parseFloat(localStorage.getItem("fret
 // every job captures the generation it started in; starting a new job or pausing bumps it, so old jobs fall away at once
 const liveFn=()=>{const g=gen;return ()=>running&&g===gen};
 let alive=liveFn();
-const playable=()=>CHORDS[chord].f.map((f,i)=>f>=0?i:-1).filter(i=>i>=0);
+const playable=()=>playableOf(chord);
 
 // ---------- drawing ----------
-// chord picker: a row of group tabs (Basic / 7ths / Barre / Power) over a grid of chord keys for that group
+// chord picker: group tabs over a grid of chord keys (tabs are hidden while only one group is shown, see HIDDEN_GROUPS)
 let curGroup=groupOf(chord);
 function buildPicker(){
   const ng=Object.keys(GROUPS).length;$("cgroups").style.gridTemplateColumns=`repeat(${ng},1fr)`;
@@ -425,7 +425,7 @@ function drawBoard(){
   s+=`<rect x="${X0}" y="${T}" width="${4*FW}" height="${6*22+2}" fill="#07122e"/>`;
   // fret numbers
   for(let n=start;n<start+4;n++)s+=`<text x="${fx(n)}" y="${T-9}" text-anchor="middle" font-family="Share Tech Mono, Courier New, monospace" font-size="13" fill="#2bff5a">${n}</text>`;
-  // inlay at the 3rd fret
+  // fret-marker inlays (3, 5, 7, 9) that fall inside the window
   for(const n of [3,5,7,9])if(n>=start&&n<start+4)s+=`<rect x="${fx(n)-5}" y="${y(2.5)-5}" width="10" height="10" transform="rotate(45 ${fx(n)} ${y(2.5)})" fill="url(#fbChrome)" opacity=".35"/>`;
   // frets and nut: chrome bars with hard dark edges
   for(let n=1;n<=4;n++)s+=`<rect x="${X0+n*FW-2.5}" y="${T}" width="5" height="${6*22+2}" fill="url(#fbBar)" stroke="#000" stroke-width=".8"/>`;
@@ -875,7 +875,7 @@ async function tuneGuitar(ok=alive){
         tuneRes[i]={cents:pc,ring:lastPluck.ring??TYPICAL_RING,peak:lastPluck.peak,raw:lastPluck.peak/Math.pow(10,lastPluck.gainDb/20),hf:lastPluck.hf,flat:lastPluck.flat};
         beep();setTuneText("In tune ✓",`${cap(STR[i].full)} done.`,"good");drawTuner();
         await sleep(700);if(!ok()||!tuning)break;
-        if(STR.every((_,k)=>tuneRes[k])){saveTuning();setTuneText("All six strings in tune ✓","Tap Done, or pick a string to check it again.","good");tuneCents=null;drawTuner();await sleep(900);break}
+        if(STR.every((_,k)=>tuneRes[k])){setTuneText("All six strings in tune ✓","Tap Done, or pick a string to check it again.","good");tuneCents=null;drawTuner();await sleep(900);break}
         nextString();continue;
       }
       setTuneText("In tune ✓",lastPluck?"Hold it…":"Pluck it once more so I can learn how it sounds.","good");
@@ -945,7 +945,7 @@ async function checkChord(ok=alive){
       current=i;drawBoard();
       if(!tries&&!missed){setSay(`Pluck the ${STR[i].full}.`,`${lab(chord)} · string ${6-i}`);setPrompt(estNote())}
       const a=await hear(thr,from,STR[i].midi-1,STR[i].midi+12,()=>0.3*pluckLvl(i));if(a===null)return;
-      if(a==="skip"){results[i]=null;from=A.total;break}
+      if(a==="skip"||skipFlag){skipFlag=false;results[i]=null;from=A.total;break}   // Skip tapped while the pluck was being analysed counts for this string
       // no clear note and quieter than half a normal pluck: hand noise while setting up, so just keep listening
       if(!a.f&&cal?.s?.[i]?.raw&&a.peak/Math.pow(10,a.gainDb/20)<0.5*cal.s[i].raw){from=after(0.05);continue}
       // a pluck with no clear note at all is often a bad catch, not a muted string: ask once more before blaming a finger
@@ -1190,7 +1190,7 @@ function finishChord(){
   stopListening();
   const gname={Basic:"basic","7ths":"7th",Barre:"barre",Power:"power"}[groupOf(chord)],left=GROUPS[groupOf(chord)].filter(k=>!doneSet.has(k));
   setSay(`${lab(chord)} complete ✓`,"Complete","good");
-  setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. Try another group, or tap any chord to practise it again.`);
+  setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. ${Object.keys(GROUPS).length>1?"Try another group, or tap":"Tap"} any chord to practise it again.`);
 }
 function pauseAll(){stopListening();setSay("Paused.","Paused");setPrompt("Pick a chord or tap Start listening to continue.")}
 // picking a chord always starts checking it; the tap itself is what lets the browser open the mic
@@ -1230,7 +1230,9 @@ async function openTuner(){
 // switching screens stops whatever was listening; the Tuner key starts the tuner (the tap lets the browser open the mic)
 async function goTo(name){
   if(name===screen&&name!=="tuner")return;
-  if(tuning&&name!=="tuner"){prevScreen=name;tuning=false;return}   // the tuner saves and closes, then lands on the picked screen
+  // leaving the tuner: whatever was listening stops (the tuner still saves the strings you tuned), then go to the picked screen.
+  // (It used to only close the tuner, so a chord check that had opened it kept listening on the new screen.)
+  if(tuning)prevScreen=name;
   if(running)pauseAll();
   if(name==="tuner"){prevScreen=screen;setScreen("tuner");openTuner();return}
   setScreen(name);
@@ -1239,6 +1241,8 @@ async function goTo(name){
   if(name==="changes"){setSay("Pick 2 to 4 chords and tap Start changes.","Changes");setPrompt("")}
 }
 document.querySelectorAll("#menu button").forEach(b=>b.onclick=()=>goTo(b.dataset.go));
+// the phone locks or you switch apps: iPhone cuts the mic, so pause cleanly instead of "listening" to nothing
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&running){pauseAll();setPrompt("Paused while the app was in the background. Pick a chord to carry on.")}});
 // ---------- first-run walkthrough ----------
 // Shown once to new users (no tuner calibration yet): what it does → phone setup + mic → tune.
 // The last button opens the tuner (the tap is what lets Safari ask for the mic). After tuning, Em is highlighted as the first chord.

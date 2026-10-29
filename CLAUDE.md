@@ -33,7 +33,7 @@ The two Claudes can't talk to each other directly. THIS REPO is how they stay in
 - Live app: https://braegles.github.io/fret-coach/  (open on an iPhone in Safari, allow the microphone)
 - Repo: https://github.com/braegles/fret-coach
 - Deploy: merge to `main` (GitHub Pages serves index.html from main; republishes in about a minute).
-  The version tag in the header ("V32") shows what's live. Reopen Safari if the old version sticks.
+  The version tag in the header (e.g. "V38") shows what's live. Reopen Safari if the old version sticks.
 - Teamwork: Braedon adds David as a collaborator (repo Settings → Collaborators). Only one person edits
   index.html at a time, or use branches, so uploads don't overwrite each other.
 
@@ -194,7 +194,8 @@ Rename only after the check, then buy the domain and move the site to it.
 ## Status
 - All 8 basic chords work live. Chord change trainer works well.
 - v31: 29 chords, grouped picker, barre diagrams + tips, 2–4 chord change loops. v32: barre chords less strict.
-- Not yet tested live: most 7ths, barre and power chords.
+- v37: only the 8 basic chords are shown for now. v38: "Quick setup first" prompt + code-review bug fixes.
+- Not yet tested live: 7ths, barre and power chords (hidden for now); "Skip for now" standard settings.
 
 ## Working style
 - Batch changes; build and upload a new version only when ready. Bump the version tag every release.
