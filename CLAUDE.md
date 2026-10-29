@@ -159,7 +159,7 @@ Rename only after the check, then buy the domain and move the site to it.
 
 ## How the file is laid out (single file: HTML + CSS + JS, no build step, no libraries)
 - CSS: Y2K console look (chrome bevels, hard edges, Anton display font, green wireframe canvas background, LEDs).
-- Screens via the top menu: Chords, Changes, Tuner, Habits, Setup (body[data-screen] CSS rules show/hide panels).
+- Screens via the top menu: Chords, Changes, Notes (fretboard learner, v39), Tuner, Habits, Setup (body[data-screen] CSS rules show/hide panels).
 - JS sections, in order:
   - CHORDS library (29 chords): f = fret per string low E→high e (-1 don't play, 0 open), g = finger 1–4,
     optional barre {fret,from,to}. ALL_GROUPS = Basic / 7ths / Barre / Power; HIDDEN_GROUPS (7ths, Barre,
@@ -180,7 +180,7 @@ Rename only after the check, then buy the domain and move the site to it.
   - Chord changes: loop of 2–4 chords, times each change, quick 0.5 s strum judge, BPM up after 3 clean on-time
     changes and down after 2 fails, beat dots (no click sound).
   - Habits: every result logged on the phone; shows most repeated mistakes + slowest change; "practice weak spot".
-- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -boost, -autoboost, -muteat, -mutever, -screen, -onboarded, -firstchord.
+- localStorage keys: fretcoach-cal, -log, -bpm, -seq, -boost, -autoboost, -muteat, -mutever, -screen, -onboarded, -firstchord, -notestats.
 
 ## Tuning notes (learned from real recordings, iPhone mic)
 - Muted = rings much shorter than calibration (default under 50%, Setup slider). Barre chords get extra slack.
