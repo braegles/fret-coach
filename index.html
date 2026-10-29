@@ -182,7 +182,29 @@ ol.habits li span:first-child{min-width:0}
 .led.on{background:var(--wire);box-shadow:var(--bevel)}
 
 /* screens: only the open one's panels show */
-.cgroups,.chords,.stage,.strumcard,.changes,.habitcard,.settings,.tuner,.notescard{display:none}
+.cgroups,.chords,.stage,.strumcard,.changes,.habitcard,.settings,.tuner,.notescard,.workcard{display:none}
+body[data-screen="habits"] .workcard{display:grid}
+/* daily workout */
+.workcard{padding:12px;gap:10px}
+.workcard h2{margin:0;justify-self:start;font-family:var(--f-disp);font-weight:400;font-size:18px;letter-spacing:.08em;text-transform:uppercase;padding:3px 12px;background:var(--metal);color:#101624;border:1px solid #000;box-shadow:var(--bevel)}
+.wodays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wodays span{display:grid;justify-items:center;gap:3px;font:12px var(--f-mono);color:var(--muted)}
+.wodays i{width:100%;height:14px;background:#000;border:1px solid #39456b;box-shadow:var(--bevel-in)}
+.wodays .on i{background:var(--wire);border-color:#000;box-shadow:var(--bevel)}
+.wodays .today{color:var(--yellow)}
+.wolist{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.wolist li{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:center;padding:8px 10px;background:#020714;border:1px solid var(--line)}
+.wolist li i{width:12px;height:12px;background:#1b2234;border:1px solid #000}
+.wolist li.ok i{background:var(--wire)}.wolist li.now i{background:var(--yellow)}.wolist li.skip i{background:#555}
+.wolist li.now{border-color:var(--yellow)}
+.wolist li div{display:grid;gap:2px;min-width:0}.wolist li b{font-size:15px}.wolist li span{font-size:13px;color:var(--muted)}
+.wolist li em{font:13px var(--f-mono);font-style:normal;color:var(--wire)}
+#woMsg:empty{display:none}#woMsg{color:var(--wire);font-weight:bold}
+.wobar{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:linear-gradient(180deg,#0b1a40,#020818);border:1px solid #000;box-shadow:0 0 0 1px var(--yellow),0 3px 0 #000}
+.wobar[hidden]{display:none}
+.wotext{display:grid;gap:2px;min-width:0;font-size:14.5px;font-weight:bold}
+.wobar .btn{min-height:44px;font-size:15px;padding:0 14px}
+.wox{width:36px;height:36px;border:1px solid #000;background:var(--metal);color:#101624;font-size:16px;cursor:pointer;box-shadow:var(--bevel)}
 body[data-screen="notes"] .notescard{display:grid}
 /* fretboard learner */
 .notescard{padding:12px;gap:10px}
@@ -240,7 +262,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
 <canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v39</span></span></div>
+    <div class="brand"><span class="word">Fret Coach</span><span class="tagline">Tune · Check · Strum <span class="ver">v40</span></span></div>
     <span class="led" id="led" title="Listening light" aria-hidden="true"></span>
   </div>
 
@@ -249,9 +271,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
     <button type="button" data-go="changes"><i aria-hidden="true"></i>Changes</button>
     <button type="button" data-go="notes"><i aria-hidden="true"></i>Notes</button>
     <button type="button" data-go="tuner"><i aria-hidden="true"></i>Tuner</button>
-    <button type="button" data-go="habits"><i aria-hidden="true"></i>Habits</button>
+    <button type="button" data-go="habits"><i aria-hidden="true"></i>Daily</button>
     <button type="button" data-go="settings"><i aria-hidden="true"></i>Setup</button>
   </nav>
+
+  <div class="wobar" id="wobar" hidden aria-live="polite"><div class="wotext"><span class="phase" id="woPhase"></span><span id="woText"></span></div><button class="btn" id="woBtn" type="button">Go</button><button class="wox" id="woStop" type="button" aria-label="Close the workout">✕</button></div>
 
   <nav class="cgroups" id="cgroups" aria-label="Chord group"></nav>
   <nav class="chords" id="chords" aria-label="Pick a chord"></nav>
@@ -307,6 +331,16 @@ input[type=range]::-moz-range-thumb{width:22px;height:32px;background:#c3cad6;bo
       <button class="btn primary" id="fbGo" type="button">Start test</button>
     </div>
     <div class="neck"><svg id="neck" role="img" aria-label="Notes on the neck"></svg></div>
+  </section>
+
+  <section class="card workcard">
+    <h2>Today's workout</h2>
+    <div class="wodays" id="woDays" aria-label="Last 7 days"></div>
+    <p class="msg" id="woStreak"></p>
+    <ol class="wolist" id="woList"></ol>
+    <button class="btn primary" id="woGo" type="button">Start today's workout</button>
+    <p class="msg" id="woMsg" aria-live="polite"></p>
+    <p class="msg muted">About 5 minutes, picked from your own mistakes, your slowest change and your weakest string. It changes as you improve.</p>
   </section>
 
   <section class="card habitcard">
@@ -1028,7 +1062,7 @@ async function strumLoop(thr,from,untilGood,ok=alive){
     if(strumRes.st==="ok"){
       goods++;beep();
       if(untilGood){doneSet.add(chord);finishChord();return}
-      setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");
+      setSay(strumRes.verdict,goods>1?`Clean strums: ${goods}`:"Sounds good","good");setPrompt("");woTick("strum",chord);
     }else{
       setSay(strumRes.verdict,strumRes.st==="warn"?"Close":"Fix",strumRes.st==="warn"?"warn":"fix");setPrompt(`Adjust, then strum ${lab(chord)} again.`);
       await pause();
@@ -1158,7 +1192,7 @@ async function changeDrill(seq,ok=alive){
       let msg=`${tn} ✓ ${secs.toFixed(1)} s${onTime?" (on time)":" (a bit slow)"}`;
       if(streak>=3&&bpm<160){bpm+=6;streak=0;msg+=` · speeding up to ${bpm} BPM`;setBeat(bpm)}
       setSay(msg+`. Now ${nm[next]}!`,onTime?"Clean change":"Clean, keep going",onTime?"good":"warn");setPrompt("");
-      beep();lastAt=at;idx=next;
+      beep();lastAt=at;idx=next;woTick("change",key);
     }else{
       fails++;streak=0;
       const late=missing.length?blameFinger(target,missing[0]):null;
@@ -1362,7 +1396,7 @@ async function noteTest(ok=alive){
       const okNote=heard===q.note,secs=(performance.now()-t0)/1000;
       fbTest.shown={target,heard:fret>=0&&fret<=FB_FRETS?fret:null,ok:okNote};
       fbRecord(q.s,q.note,okNote);
-      if(okNote){fbTest.streak++;beep();fbSay(`${q.note} ✓ fret ${target.includes(fret)?fret:target[0]} · ${secs.toFixed(1)} s`,fbTest.streak>2?`Streak ${fbTest.streak}`:"Correct","good")}
+      if(okNote){fbTest.streak++;beep();woTick("note",q.s);fbSay(`${q.note} ✓ fret ${target.includes(fret)?fret:target[0]} · ${secs.toFixed(1)} s`,fbTest.streak>2?`Streak ${fbTest.streak}`:"Correct","good")}
       else{fbTest.streak=0;fbSay(`That was <b>${heard}</b>${fret>=0&&fret<=FB_FRETS?` (fret ${fret})`:""}. <b>${q.note}</b> is at fret ${target.join(" and ")} on the ${sName}.`,"Not quite","fix")}
       drawFb();done=true;
       await pause(okNote?900:2600,ok);from=after(0.1);
@@ -1381,12 +1415,119 @@ $("fbGo").onclick=startNoteTest;
 $("fbHintCb").onchange=e=>{fbHints=e.target.checked;drawFb()};
 $("fbSharpCb").onchange=e=>{fbSharps=e.target.checked;drawFb()};
 
+
+// ---------- daily workout (Issue #7) ----------
+// A ~5-minute routine built from your own data, one block at a time:
+//   1 warm-up strums · 2 your most common chord problem · 3 your slowest chord change · 4 your weakest string (Notes test)
+// Each block reuses an existing screen; the features report progress through woTick(), and a banner under the menu
+// shows where you are. Finishing all blocks marks the day done and builds a streak. Saved per day in localStorage.
+const WO_KEY="fretcoach-workout",DAYS_KEY="fretcoach-days";
+const dayStr=(d=new Date())=>d.toLocaleDateString("en-CA");   // local YYYY-MM-DD
+let woDays=[];try{woDays=JSON.parse(localStorage.getItem(DAYS_KEY)||"[]")}catch(e){}
+let wo=null;try{wo=JSON.parse(localStorage.getItem(WO_KEY)||"null");if(!wo||wo.date!==dayStr())wo=null}catch(e){wo=null}
+const woSave=()=>{try{localStorage.setItem(WO_KEY,JSON.stringify(wo))}catch(e){}};
+const woCur=()=>wo?wo.blocks.find(b=>!b.done):null;
+function woStreak(){
+  const d=new Date();if(!woDays.includes(dayStr(d)))d.setDate(d.getDate()-1);   // today not done yet: count up to yesterday
+  let n=0;while(woDays.includes(dayStr(d))){n++;d.setDate(d.getDate()-1)}
+  return n;
+}
+function woBest(){
+  const s=[...woDays].sort();let best=0,run=0,prev=null;
+  for(const x of s){const d=new Date(x+"T12:00");run=prev&&(d-prev)/864e5<1.5?run+1:1;best=Math.max(best,run);prev=d}
+  return best;
+}
+// pick today's blocks from the habits log, the change times and the Notes test scores
+function buildWorkout(){
+  const {list,slow}=computeHabits(),basics=GROUPS.Basic,dayNo=Math.floor(Date.now()/864e5);
+  const h=list[0],fixCh=h?h.ch:basics[dayNo%basics.length];
+  const warm=fixCh==="Em"?"G":"Em";
+  const PAIRS=[["G","C"],["C","D"],["Em","C"],["D","A"],["Am","E"],["G","D"],["C","Am"],["E","A"],["Dm","C"]].filter(p=>p.every(shown));
+  const pair=slow[0]?slow[0].pair.split("→"):PAIRS[dayNo%PAIRS.length];
+  // weakest string in the Notes test (needs a few answers), otherwise the one practised least
+  const sc=[0,1,2,3,4,5].map(s=>{const e=fbStats[String(s)]||{r:0,w:0},n=e.r+e.w;return {s,n,rate:n?e.r/n:0}});
+  const tried=sc.filter(x=>x.n>=4).sort((a,b)=>a.rate-b.rate),str=(tried[0]&&tried[0].rate<0.9?tried[0]:sc.sort((a,b)=>a.n-b.n)[0]).s;
+  const blocks=[
+    {type:"strum",key:warm,label:`Warm up: ${lab(warm)}`,detail:"3 clean strums to get your hand going.",target:3},
+    {type:"chord",key:fixCh,label:`Fix: ${lab(fixCh)}`,detail:h?`Your most common problem: ${habitText(h.ch,h.i,h.kind)}. Check every string, then one clean strum.`:"Check every string, then one clean strum.",target:1},
+    {type:"change",key:pair.join("→"),label:`Change: ${pair.map(lab).join(" → ")}`,detail:slow[0]?`Your slowest change (about ${slow[0].avg.toFixed(1)} s). 6 clean changes.`:"6 clean changes. Smooth changes are the #1 beginner skill.",target:6},
+    {type:"note",key:String(str),label:`Notes: ${STR[str].full}`,detail:`5 right answers in the Notes test${tried[0]?.s===str?" (your weakest string)":""}.`,target:5}
+  ];
+  blocks.forEach(b=>{b.prog=0;b.done=false});
+  return {date:dayStr(),blocks,active:false,finished:false};
+}
+// progress from the features: type + which chord / pair / string it was
+function woTick(type,key){
+  const b=woCur();if(!wo?.active||!b||b.type!==type||b.key!==String(key))return;
+  b.prog++;
+  if(b.prog>=b.target){
+    b.done=true;
+    if(running)stopListening();
+    if(!woCur())return woFinish();
+    beep();
+  }
+  woSave();drawWoBar();drawWorkout();
+}
+function woFinish(){
+  wo.finished=true;wo.active=false;woSave();
+  if(!woDays.includes(wo.date)){woDays.push(wo.date);woDays=woDays.slice(-120);try{localStorage.setItem(DAYS_KEY,JSON.stringify(woDays))}catch(e){}}
+  setScreen("habits");drawWorkout();drawHabits();drawWoBar();
+  const n=woStreak();
+  $("woMsg").textContent=n>1?`Workout done ✓ That's ${n} days in a row. See you tomorrow!`:"Workout done ✓ Nice work. Come back tomorrow to start a streak.";
+}
+// start (or continue) the current block on its own screen; called from a tap so the mic can open
+function woRun(){
+  if(!wo||wo.finished)wo=buildWorkout();
+  const b=woCur();if(!b)return woFinish();
+  wo.active=true;woSave();drawWoBar();drawWorkout();
+  if(running)stopListening();
+  if(b.type==="chord")return pickChord(b.key);
+  if(b.type==="change")return startChanges(b.key.split("→"));
+  if(b.type==="note"){setScreen("notes");fbMode="test";fbTestStr=b.key;fbSharps=false;fbTest=null;drawFb();return startNoteTest()}
+  // strum warm-up: strum practice on the chosen chord
+  setScreen("chords");chord=b.key;results=[];strumRes=null;current=-1;
+  if(groupOf(b.key)!==curGroup){curGroup=groupOf(b.key);buildPicker()}else setControls();
+  drawAll();setSay(`Warm up: strum ${lab(b.key)}.`,"Workout");setPrompt("");
+  const go=async()=>{if(!running&&!await start())return;practice=true;setControls();runJob(()=>strumLoop())};
+  if(!cal){askSetup(go);return}
+  go();
+}
+function woSkip(){const b=woCur();if(!b)return;b.done=true;b.skipped=true;if(running)stopListening();woSave();if(!woCur())return woFinish();drawWoBar();drawWorkout()}
+function woClose(){if(wo){wo.active=false;woSave()}drawWoBar();drawWorkout()}
+// banner under the menu while a workout is on
+function drawWoBar(){
+  const bar=$("wobar");if(!bar)return;
+  if(!wo||!wo.active||!woCur()){bar.hidden=true;return}
+  bar.hidden=false;const b=woCur(),i=wo.blocks.indexOf(b);
+  $("woPhase").textContent=`Workout · ${i+1} of ${wo.blocks.length}`;
+  if(running){$("woText").textContent=`${b.label} · ${b.prog}/${b.target}`;$("woBtn").textContent="Skip"}
+  else{$("woText").textContent=(i>0&&wo.blocks[i-1].done&&!b.prog?"✓ Done! Next: ":"Next: ")+b.label;$("woBtn").textContent=b.prog?"Continue":"Go"}
+}
+// the card on the Daily screen
+function drawWorkout(){
+  if(!$("woList"))return;
+  const plan=wo||buildWorkout(),today=dayStr(),done=woDays.includes(today);
+  // last 7 days as LEDs
+  const days=[];for(let k=6;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);days.push(d)}
+  $("woDays").innerHTML=days.map(d=>`<span class="${woDays.includes(dayStr(d))?"on":""}${dayStr(d)===today?" today":""}"><i></i>${"SMTWTFS"[d.getDay()]}</span>`).join("");
+  const n=woStreak(),best=Math.max(woBest(),n);
+  $("woStreak").innerHTML=n?`Streak: <b>${n} day${n>1?"s":""}</b>${best>n?` · best ${best}`:""}`:best?`Best streak: <b>${best} days</b>. Start a new one today.`:"Do today's workout to start a streak.";
+  $("woList").innerHTML=plan.blocks.map(b=>`<li class="${b.done?(b.skipped?"skip":"ok"):b===woCur()&&wo?.active?"now":""}"><i></i><div><b>${b.label}</b><span>${b.detail}</span></div><em>${b.done?(b.skipped?"skipped":"✓"):b.prog?`${b.prog}/${b.target}`:""}</em></li>`).join("");
+  const started=wo&&wo.blocks.some(b=>b.done||b.prog);
+  $("woGo").textContent=done?"Done for today ✓":started?"Continue workout":"Start today's workout";
+  $("woGo").disabled=done;
+  if(!wo&&!done)$("woMsg").textContent="";
+}
+$("woGo").onclick=()=>woRun();
+$("woBtn").onclick=()=>{running?woSkip():woRun()};
+$("woStop").onclick=()=>{if(running)pauseAll();woClose()};
+
 // ---------- controls ----------
 function setControls(){
   $("start").textContent=running?"Pause listening":"Start listening";
   $("skip").disabled=!running;$("skip").textContent=tuning?"Skip this string":"Skip string";
   $("strumBtn").disabled=!running||tuning;$("strumBtn").setAttribute("aria-pressed",practice);
-  $("led").classList.toggle("on",running);document.body.classList.toggle("drilling",drillOn&&running);
+  $("led").classList.toggle("on",running);if(typeof drawWoBar==="function")drawWoBar();document.body.classList.toggle("drilling",drillOn&&running);
   $("chStart").textContent=drillOn&&running?"Stop changes":"Start changes";$("chStart").disabled=!drillOn&&!!readSeq().err;SLOTS.forEach(id=>$(id).disabled=drillOn&&running);
   document.querySelectorAll(".chords button").forEach(b=>{const k=b.dataset.chord,d=doneSet.has(k);b.setAttribute("aria-pressed",k===chord);b.classList.toggle("done",d);b.setAttribute("aria-label",lab(k)+(d?", completed":""))});
 }
@@ -1404,7 +1545,7 @@ function stopListening(){
 function finishChord(){
   stopListening();
   const gname={Basic:"basic","7ths":"7th",Barre:"barre",Power:"power"}[groupOf(chord)],left=GROUPS[groupOf(chord)].filter(k=>!doneSet.has(k));
-  setSay(`${lab(chord)} complete ✓`,"Complete","good");
+  setSay(`${lab(chord)} complete ✓`,"Complete","good");setTimeout(()=>woTick("chord",chord));
   setPrompt(left.length?`Every string rang and the strum sounded right. Pick another ${gname} chord (${left.length} left), or tap ${lab(chord)} to redo it.`:`All ${gname} chords complete. ${Object.keys(GROUPS).length>1?"Try another group, or tap":"Tap"} any chord to practise it again.`);
 }
 function pauseAll(){stopListening();setSay("Paused.","Paused");setPrompt("Pick a chord or tap Start listening to continue.")}
@@ -1451,7 +1592,7 @@ async function goTo(name){
   if(running)pauseAll();
   if(name==="tuner"){prevScreen=screen;setScreen("tuner");openTuner();return}
   setScreen(name);
-  if(name==="habits")drawHabits();
+  if(name==="habits"){drawHabits();drawWorkout()}
   if(name==="chords")setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
   if(name==="changes"){setSay("Pick 2 to 4 chords and tap Start changes.","Changes");setPrompt("")}
   if(name==="notes"){fbTest=null;fbSay("Pick a string and tap Start test.","Test");drawFb()}
@@ -1513,7 +1654,7 @@ $("clearHist").onclick=()=>{if(!clearArmed){clearArmed=true;$("clearHist").textC
   clearArmed=false;LOG=[];try{localStorage.removeItem(LOG_KEY)}catch(e){};$("clearHist").textContent="Cleared";setTimeout(()=>$("clearHist").textContent="Clear history",1500);drawHabits()};
 fillPairs();drawHabits();
 {let st="chords";try{st=localStorage.getItem("fretcoach-screen")||"chords"}catch(e){};if(!["chords","changes","notes","habits","settings"].includes(st))st="chords";setScreen(st);prevScreen=st}
-buildPicker();drawAll();drawFb();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
+buildPicker();drawAll();drawFb();drawWorkout();drawWoBar();setBoost(boostDb);showAuto();setMuteAt(muteAt);setControls();
 setSay(cal?"Pick a chord to start.":"Pick a chord to start. First time? There's a quick 30-second setup.","Ready");
 if(!cal&&stored("fretcoach-onboarded")!=="1")showOnboard(0);
 
