@@ -2,6 +2,22 @@
 
 Newest first. Each entry: version · who · what changed · what's left · notes for the other Claude.
 
+## v40 — 2026-10-29 · Braedon's Claude (Issue #7, branch braedon/daily-workout)
+- **Daily workout** on the Habits screen (menu key renamed **Daily**): a ~5-minute routine built from your own data:
+  1. warm-up: 3 clean strums (Em, or G if Em is today's fix chord)
+  2. fix: your most common chord problem from the habits log (a full string check + clean strum)
+  3. change: your slowest change (6 clean changes), or a rotating basic pair if there's no data yet
+  4. notes: your weakest string in the Notes test (5 right answers), or the one practised least
+- Each block opens its own screen and the existing features report progress via `woTick(type, key)` (hooks in
+  strumLoop, finishChord, changeDrill, noteTest). A banner under the menu shows "Workout · 2 of 4", progress, and
+  Skip / Go / Continue / ✕. Leaving mid-block pauses it, and Continue picks it up.
+- **Streaks + visible progress:** finishing all 4 marks the day done. The card shows the last 7 days as LEDs, the
+  current streak and the best streak, plus a done message ("That's 3 days in a row"). Data in localStorage
+  `fretcoach-workout` (today's plan + progress) and `fretcoach-days` (days done).
+- Detection maths unchanged. Tested in a browser: plan picked from fake habits/changes/notes data, all 4 blocks via
+  the banner, finish → streak 3 with two earlier days, persists after reload, no script errors. Found and fixed a
+  crash in the banner after the last block during testing. Needs a live run with the guitar.
+
 ## v39 — 2026-10-29 · Braedon's Claude (Issue #25, branch braedon/fretboard, built on #24)
 - **New Notes screen: fretboard learner.** Neck drawn like Braedon's reference chart: pale neck, frets 1–12 down the side,
   one colour-coded circle per note (same colour = same note everywhere), dots at 3/5/7/9 and a double dot at 12.
